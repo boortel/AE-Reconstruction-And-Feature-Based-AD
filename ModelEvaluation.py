@@ -10,14 +10,14 @@ This class is used for the evaluation of the trained model
 
 import os
 import sys
+import logging
 import numpy as np
 import matplotlib.pyplot as plt
 
-from skimage.metrics import mean_squared_error as MSE
-from skimage.metrics import structural_similarity as ssim
+import ModelClassification
 
-from tensorflow.keras.models import Model, load_model
-from tensorflow.keras.preprocessing.image import ImageDataGenerator
+from keras.models import Model, load_model
+from keras.preprocessing.image import ImageDataGenerator
 
 class ModelEvaluation():
 
@@ -36,9 +36,6 @@ class ModelEvaluation():
         self.batchSize = batchSizeEv
         self.numEpochEv = numEpochEv
 
-        # Set actions
-        self.action = ('Train', 'Test')
-
         # Set model name
         self.modelName = modelSel
 
@@ -46,10 +43,14 @@ class ModelEvaluation():
         self.setGenerators()
         self.getLabels()
 
-        # Encode, decode and visualise the data
-        self.dataEncodeDecode()
-        self.visualiseResults()
+        # Encode, decode and visualise the training data
+        trainProcData = self.dataEncodeDecode('Train')
 
+        # Create the classification object
+        classifier = ModelClassification(self.modelName)
+
+        # Train the data evaluation models
+        classifier.procDataFromDict(trainProcData, 'Train')
 
     ## Normalize the input data
     def NormalizeData(data):
@@ -59,62 +60,77 @@ class ModelEvaluation():
 
     ## Read all labels from the npz file
     def getLabels(self):
-        # Load npz data
-        data = np.load(self.labelsPath)
-
         try:
-            self.train_label = data['train']
-            self.valid_label = data['valid']
-            self.test_label = data['test']
+            # Load npz data
+            data = np.load(self.labelsPath)
+
+            try:
+                self.train_label = data['train']
+                self.valid_label = data['valid']
+                self.test_label = data['test']
+            except:
+                print('Loading data should be numpy array and has "images" and "labels" keys.')
+                sys.exit(1)
         except:
-            print('Loading data should be numpy array and has "images" and "labels" keys.')
-            sys.exit(1)
+            logging.error(': Loading the labels failed...')
+            raise ValueError('Loading the labels failed')
+
+        else:
+            logging.info(': Loading the labels was succesful...')
 
 
     ## Set the image generators and its parameters
     def setGenerators(self):
+        
+        try:
+            tSize = (self.imageDim(0), self.imageDim(1))
 
-        tSize = (self.imageDim(0), self.imageDim(1))
+            if self.imageDim(2) == 3:
+                cMode = 'rgb'
+            else:
+                cMode = 'gray'
 
-        if self.imageDim(2) == 3:
-            cMode = 'rgb'
+            train_datagen = ImageDataGenerator(
+                rescale = 1./255)
+                # samplewise_center = True,
+                # samplewise_std_normalization = True)
+            
+            test_datagen = ImageDataGenerator(
+                rescale = 1./255)
+                # samplewise_center = True,
+                # samplewise_std_normalization = True)
+            
+            # Data generator for train data
+            self.train_generator = train_datagen.flow_from_directory(
+                (self.datasetPath + 'train'), 
+                target_size = tSize, 
+                batch_size = self.batchSize,
+                color_mode = cMode,
+                class_mode = 'input',
+                shuffle = False)
+            
+            # Data generator for test data
+            self.test_generator = test_datagen.flow_from_directory(
+                (self.datasetPath + 'test'), 
+                target_size = tSize, 
+                batch_size = self.batchSize,
+                color_mode = cMode,
+                class_mode = 'input',
+                shuffle = False)
+        except:
+            logging.error(': Setting up the data generators failed...')
+            raise ValueError('Setting up the data generators failed')
+
         else:
-            cMode = 'gray'
-
-        train_datagen = ImageDataGenerator(
-            rescale = 1./255)
-            # samplewise_center = True,
-            # samplewise_std_normalization = True)
-        
-        test_datagen = ImageDataGenerator(
-            rescale = 1./255)
-            # samplewise_center = True,
-            # samplewise_std_normalization = True)
-        
-        # Data generator for train data
-        self.train_generator = train_datagen.flow_from_directory(
-            (self.datasetPath + 'train'), 
-            target_size = tSize, 
-            batch_size = self.batchSize,
-            color_mode = cMode,
-            class_mode = 'input',
-            shuffle = False)
-        
-        # Data generator for test data
-        self.test_generator = test_datagen.flow_from_directory(
-            (self.datasetPath + 'test'), 
-            target_size = tSize, 
-            batch_size = self.batchSize,
-            color_mode = cMode,
-            class_mode = 'input',
-            shuffle = False)
+            logging.info(': Setting up the data generators was succesful...')
 
 
     ## Get the encoded and decoded data from selected model and dataset
-    def dataEncodeDecode(self):
-        
-        for actStr in self.action:
+    def dataEncodeDecode(self, actStr):
 
+        processedData = {}
+
+        try:
             # Set the train or test data
             if actStr == 'Train':
                 data_generator = self.train_generator
@@ -130,63 +146,86 @@ class ModelEvaluation():
             
             # Get the encoded data
             encoder = Model(inputs = autoencoder.input, outputs = autoencoder.get_layer('enc').output)
-            self.enc_out = self.NormalizeData(encoder.predict(data_generator))
+            enc_out = self.NormalizeData(encoder.predict(data_generator))
 
             # Get the decoded data
-            self.dec_out = self.NormalizeData(autoencoder.predict(data_generator))
+            dec_out = self.NormalizeData(autoencoder.predict(data_generator))
 
             # Get the original data to be saved in npz
             data_generator.reset()
-            self.orig_data = np.concatenate([data_generator.next()[0] for i in range(data_generator.__len__())])
+            orig_data = np.concatenate([data_generator.next()[0] for i in range(data_generator.__len__())])
+
+            processedData = {'Org': orig_data, 'Enc': enc_out, 'Dec': dec_out, 'Lab': labels}
             
             # Save the obtained data
-            np.savez(outputPath, orgData = self.orig_data, encData = self.enc_out, decData = self.dec_out, labels = labels)
+            np.savez(outputPath, orgData = orig_data, encData = enc_out, decData = dec_out, labels = labels)
+
+            # Visualise the obtained data
+            self.visualiseResults(actStr, processedData)
+        
+        except:
+            logging.error(': Data encode and decode for the model ' + self.modelName + ' failed...')
+            raise ValueError('Data encode and decode ' + self.modelName + ' failed')
+
+        else:
+            logging.info(': Data encode and decode for the model ' + self.modelName + ' was succesful...')
+        
+        return processedData
 
 
     ## Visualise the results
-    def visualiseResults(self):
-        
-        for actStr in self.action:
-
+    def visualiseResults(self, actStr, processedData):
+        try:
             # Set the train or test data
             if actStr == 'Train':
                 label = ' during training.'
             else:
                 label = ' during testing.'
 
+            orig_data = processedData.get('Org')
+            enc_out = processedData.get('Enc')
+            dec_out = processedData.get('Dec')
+
             # Plot the encoded samples from all classes
             fig, axarr = plt.subplots(4,3)
             fig.suptitle('Original, encoded and decoded images of the ' + self.modelName + ' autoencoder model' + label)
             
             axarr[0,0].set_title("Original")
-            axarr[0,0].imshow(self.orig_data[0])
+            axarr[0,0].imshow(orig_data[0])
             axarr[0,0].axis('off')
-            axarr[1,0].imshow(self.orig_data[27])
+            axarr[1,0].imshow(orig_data[27])
             axarr[1,0].axis('off')
-            axarr[2,0].imshow(self.orig_data[35])
+            axarr[2,0].imshow(orig_data[35])
             axarr[2,0].axis('off')
-            axarr[3,0].imshow(self.orig_data[200])
+            axarr[3,0].imshow(orig_data[200])
             axarr[3,0].axis('off')
             
             axarr[0,1].set_title("Encoded")
-            axarr[0,1].imshow(self.enc_out[0])
+            axarr[0,1].imshow(enc_out[0])
             axarr[0,1].axis('off')
-            axarr[1,1].imshow(self.enc_out[27])
+            axarr[1,1].imshow(enc_out[27])
             axarr[1,1].axis('off')
-            axarr[2,1].imshow(self.enc_out[35])
+            axarr[2,1].imshow(enc_out[35])
             axarr[2,1].axis('off')
-            axarr[3,1].imshow(self.enc_out[200])
+            axarr[3,1].imshow(enc_out[200])
             axarr[3,1].axis('off')
 
             axarr[0,2].set_title("Decoded")
-            axarr[0,2].imshow(self.dec_out[0])
+            axarr[0,2].imshow(dec_out[0])
             axarr[0,2].axis('off')
-            axarr[1,2].imshow(self.dec_out[27])
+            axarr[1,2].imshow(dec_out[27])
             axarr[1,2].axis('off')
-            axarr[2,2].imshow(self.dec_out[35])
+            axarr[2,2].imshow(dec_out[35])
             axarr[2,2].axis('off')
-            axarr[3,2].imshow(self.dec_out[200])
+            axarr[3,2].imshow(dec_out[200])
             axarr[3,2].axis('off')
 
             # Save the illustration figure
             fig.savefig(os.path.join(self.modelPath, self.modelName + actStr + 'AEResults.png'))
+        
+        except:
+            logging.error(': Data visualisation of the model ' + self.modelName + ' and its ' + actStr + ' dataset failed...')
+            raise ValueError('Data visualisation of the model ' + self.modelName + ' and its ' + actStr + ' dataset failed')
+
+        else:
+            logging.info(': Data visualisation of the model ' + self.modelName + ' and its ' + actStr + ' dataset was succesful...')
