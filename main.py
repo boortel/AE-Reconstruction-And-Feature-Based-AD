@@ -15,8 +15,10 @@ import logging
 import argparse
 import configparser
 
-import ModelTrain
-import ModelEvaluation
+from ModelTrain import ModelTrain
+from ModelEvaluation import ModelEvaluation
+
+import tensorflow as tf
 
 
 def parse_args():
@@ -24,7 +26,7 @@ def parse_args():
 
     parser.add_argument('--iniBasePath', default = './init', type = str, help = 'Path to ini files')
     parser.add_argument('--modelTrain', default = 1  , type = int, help = 'Set to 1 if you want to train models')
-    parser.add_argument('--modelEval', default = 1  , type = int, help = 'Set to 1 if you want to evaluate models')
+    parser.add_argument('--modelEval', default = 0  , type = int, help = 'Set to 1 if you want to evaluate models')
 
     args = parser.parse_args()
 
@@ -33,6 +35,9 @@ def parse_args():
 
 def main():
     """main function"""
+    
+    print("Num GPUs Available: ", len(tf.config.list_physical_devices('GPU')))
+
     args = parse_args()
 
     # Get the arg values
@@ -41,7 +46,7 @@ def main():
     modelEval = args.modelEval
 
     # Initialize the logging
-    logging.basicConfig(filename = '/ProgramLog.txt', level=logging.DEBUG, format='(%(asctime)s %(threadName)-10s %(levelname)-7s) %(message)s')
+    logging.basicConfig(level=logging.DEBUG, format='(%(asctime)s %(threadName)-10s %(levelname)-7s) %(message)s')
 
     # Initialize the config parser and the extension filter
     cfg = configparser.ConfigParser()
@@ -78,8 +83,9 @@ def main():
             if modelTrain == 1:
 
                 # Train the model
+                ModelTrain(modelBasePath, datasetPathTr, modelSel, labelInfo, imageDim, batchSizeTr, numEpochTr)
                 try:
-                    ModelTrain(modelBasePath, datasetPathTr, modelSel, labelInfo, imageDim, batchSizeTr, numEpochTr)
+                    pass#ModelTrain(modelBasePath, datasetPathTr, modelSel, labelInfo, imageDim, batchSizeTr, numEpochTr)
                 except:
                     logging.error(': An error occured during the training of ' + modelSel + ' model...')
                 else:

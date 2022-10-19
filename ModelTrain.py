@@ -10,11 +10,12 @@ This class is used for training the selected model
 
 import os
 import logging
-import ModelSaved
 import matplotlib.pyplot as plt
 
-from tensorflow.keras import callbacks
-from tensorflow.keras.preprocessing.image import ImageDataGenerator
+from ModelSaved import ModelSaved
+
+from keras import callbacks
+from keras.preprocessing.image import ImageDataGenerator
 
 class ModelTrain():
 
@@ -34,7 +35,9 @@ class ModelTrain():
 
         # Set model
         self.modelName = modelSel
-        self.model = ModelSaved(self.modelName, self.imageDim, intermediateDim = 64)
+        modelObj = ModelSaved(self.modelName, self.imageDim, intermediateDim = 64)
+
+        self.model = modelObj.model
         
         # Set generators and callback
         self.setGenerators()
@@ -50,9 +53,9 @@ class ModelTrain():
 
         try:
             # Set image dimensions
-            tSize = (self.imageDim(0), self.imageDim(1))
+            tSize = (self.imageDim[0], self.imageDim[1])
 
-            if self.imageDim(2) == 3:
+            if self.imageDim[2] == 3:
                 cMode = 'rgb'
             else:
                 cMode = 'gray'
