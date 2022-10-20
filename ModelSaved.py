@@ -9,6 +9,7 @@ This class returns compiled autoencoder model later used in the AE_train.py scri
 """
 
 import logging
+import traceback
 import numpy as np
 
 from keras.losses import binary_crossentropy
@@ -65,7 +66,7 @@ class ModelSaved():
 
         except:
             logging.error(': Initialization of the selected model: ' + self.modelName + ' failed....')
-            raise ValueError('Initialization of the selected model: ' + self.modelName + ' failed')
+            traceback.print_exc()
         
 
     ## Sampling function for the VAEs

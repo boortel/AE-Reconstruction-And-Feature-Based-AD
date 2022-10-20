@@ -13,19 +13,19 @@ Please select the desired model from the module ModelSaved.py as the model argum
 import os
 import logging
 import argparse
+import traceback
 import configparser
 
 from ModelTrain import ModelTrain
 from ModelEvaluation import ModelEvaluation
-
-import tensorflow as tf
+from ModelClassification import ModelClassification
 
 
 def parse_args():
     parser = argparse.ArgumentParser(description = 'Train and evaluate models defined in the ini files of the init directory')
 
     parser.add_argument('--iniBasePath', default = './init', type = str, help = 'Path to ini files')
-    parser.add_argument('--modelTrain', default = 1  , type = int, help = 'Set to 1 if you want to train models')
+    parser.add_argument('--modelTrain', default = 0  , type = int, help = 'Set to 1 if you want to train models')
     parser.add_argument('--modelEval', default = 0  , type = int, help = 'Set to 1 if you want to evaluate models')
 
     args = parser.parse_args()
@@ -35,8 +35,6 @@ def parse_args():
 
 def main():
     """main function"""
-    
-    print("Num GPUs Available: ", len(tf.config.list_physical_devices('GPU')))
 
     args = parse_args()
 
@@ -46,7 +44,7 @@ def main():
     modelEval = args.modelEval
 
     # Initialize the logging
-    logging.basicConfig(level=logging.DEBUG, format='(%(asctime)s %(threadName)-10s %(levelname)-7s) %(message)s')
+    logging.basicConfig(level=logging.INFO, format='(%(asctime)s %(threadName)-10s %(levelname)-7s) %(message)s')
 
     # Initialize the config parser and the extension filter
     cfg = configparser.ConfigParser()
@@ -83,11 +81,11 @@ def main():
             if modelTrain == 1:
 
                 # Train the model
-                ModelTrain(modelBasePath, datasetPathTr, modelSel, labelInfo, imageDim, batchSizeTr, numEpochTr)
                 try:
-                    pass#ModelTrain(modelBasePath, datasetPathTr, modelSel, labelInfo, imageDim, batchSizeTr, numEpochTr)
+                    ModelTrain(modelBasePath, datasetPathTr, modelSel, labelInfo, imageDim, batchSizeTr, numEpochTr)
                 except:
                     logging.error(': An error occured during the training of ' + modelSel + ' model...')
+                    traceback.print_exc()
                 else:
                     logging.info(': Model ' + modelSel + ' was trained succesfuly...')
             
@@ -98,8 +96,12 @@ def main():
                     ModelEvaluation(modelBasePath, datasetPathEv, labelsPath, modelSel, labelInfo, imageDim, batchSizeEv, numEpochEv)
                 except:
                     logging.error(': An error occured during the evaluation of ' + modelSel + ' model...')
+                    traceback.print_exc()
                 else:
                     logging.info(': Model ' + modelSel + ' was evaluated succesfuly...')
+
+            mClass = ModelClassification(modelSel)
+            mClass.procDataFromFile(os.path.join(modelBasePath, modelSel + labelInfo, 'modelData', 'Eval_' + 'Train' + '.npz'), 'Train')
 
 if __name__ == '__main__':
     main()

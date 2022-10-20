@@ -11,10 +11,11 @@ This class is used for the evaluation of the trained model
 import os
 import sys
 import logging
+import traceback
 import numpy as np
 import matplotlib.pyplot as plt
 
-import ModelClassification
+from ModelClassification import ModelClassification
 
 from keras.models import Model, load_model
 from keras.preprocessing.image import ImageDataGenerator
@@ -45,15 +46,16 @@ class ModelEvaluation():
 
         # Encode, decode and visualise the training data
         trainProcData = self.dataEncodeDecode('Train')
+        testProcData = self.dataEncodeDecode('Test')
 
         # Create the classification object
-        classifier = ModelClassification(self.modelName)
+        #classifier = ModelClassification(self.modelName)
 
         # Train the data evaluation models
-        classifier.procDataFromDict(trainProcData, 'Train')
+        #classifier.procDataFromDict(trainProcData, 'Train')
 
     ## Normalize the input data
-    def NormalizeData(data):
+    def NormalizeData(self, data):
 
         return (data - np.min(data)) / (np.max(data) - np.min(data))
     
@@ -73,7 +75,7 @@ class ModelEvaluation():
                 sys.exit(1)
         except:
             logging.error(': Loading the labels failed...')
-            raise ValueError('Loading the labels failed')
+            traceback.print_exc()
 
         else:
             logging.info(': Loading the labels was succesful...')
@@ -83,9 +85,9 @@ class ModelEvaluation():
     def setGenerators(self):
         
         try:
-            tSize = (self.imageDim(0), self.imageDim(1))
+            tSize = (self.imageDim[0], self.imageDim[1])
 
-            if self.imageDim(2) == 3:
+            if self.imageDim[2] == 3:
                 cMode = 'rgb'
             else:
                 cMode = 'gray'
@@ -119,7 +121,7 @@ class ModelEvaluation():
                 shuffle = False)
         except:
             logging.error(': Setting up the data generators failed...')
-            raise ValueError('Setting up the data generators failed')
+            traceback.print_exc()
 
         else:
             logging.info(': Setting up the data generators was succesful...')
@@ -139,7 +141,7 @@ class ModelEvaluation():
                 data_generator = self.test_generator
                 labels = self.test_label
 
-            outputPath = os.path.join(self.modelPath, 'Eval_' + actStr)
+            outputPath = os.path.join(self.modelPath, 'modelData', 'Eval_' + actStr)
 
             # Load the model
             autoencoder = load_model(self.modelPath)
@@ -165,7 +167,7 @@ class ModelEvaluation():
         
         except:
             logging.error(': Data encode and decode for the model ' + self.modelName + ' failed...')
-            raise ValueError('Data encode and decode ' + self.modelName + ' failed')
+            traceback.print_exc()
 
         else:
             logging.info(': Data encode and decode for the model ' + self.modelName + ' was succesful...')
@@ -197,7 +199,7 @@ class ModelEvaluation():
             axarr[1,0].axis('off')
             axarr[2,0].imshow(orig_data[35])
             axarr[2,0].axis('off')
-            axarr[3,0].imshow(orig_data[200])
+            axarr[3,0].imshow(orig_data[199])
             axarr[3,0].axis('off')
             
             axarr[0,1].set_title("Encoded")
@@ -207,7 +209,7 @@ class ModelEvaluation():
             axarr[1,1].axis('off')
             axarr[2,1].imshow(enc_out[35])
             axarr[2,1].axis('off')
-            axarr[3,1].imshow(enc_out[200])
+            axarr[3,1].imshow(enc_out[199])
             axarr[3,1].axis('off')
 
             axarr[0,2].set_title("Decoded")
@@ -217,15 +219,15 @@ class ModelEvaluation():
             axarr[1,2].axis('off')
             axarr[2,2].imshow(dec_out[35])
             axarr[2,2].axis('off')
-            axarr[3,2].imshow(dec_out[200])
+            axarr[3,2].imshow(dec_out[199])
             axarr[3,2].axis('off')
 
             # Save the illustration figure
-            fig.savefig(os.path.join(self.modelPath, self.modelName + actStr + 'AEResults.png'))
+            fig.savefig(os.path.join(self.modelPath, 'modelData', self.modelName + actStr + 'AEResults.png'))
         
         except:
             logging.error(': Data visualisation of the model ' + self.modelName + ' and its ' + actStr + ' dataset failed...')
-            raise ValueError('Data visualisation of the model ' + self.modelName + ' and its ' + actStr + ' dataset failed')
+            traceback.print_exc()
 
         else:
             logging.info(': Data visualisation of the model ' + self.modelName + ' and its ' + actStr + ' dataset was succesful...')

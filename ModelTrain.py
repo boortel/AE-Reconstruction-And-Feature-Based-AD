@@ -10,6 +10,7 @@ This class is used for training the selected model
 
 import os
 import logging
+import traceback
 import matplotlib.pyplot as plt
 
 from ModelSaved import ModelSaved
@@ -25,6 +26,12 @@ class ModelTrain():
         # Set paths
         self.outputPath = os.path.join(modelBasePath, modelSel + labelInfo)
         self.datasetPathTr = datasetPathTr
+
+        # Create the model directory
+        mPath = os.path.join(self.outputPath, 'modelData')
+
+        if not os.path.exists(mPath):
+            os.makedirs(mPath)
 
         # Set image dimensions
         self.imageDim = imageDim
@@ -98,7 +105,7 @@ class ModelTrain():
                 shuffle = False)
         except:
             logging.error(': Data generators initialization of the ' + self.modelName + ' model failed...')
-            raise ValueError('Data generators initialization of the ' + self.modelName + ' model failed')
+            traceback.print_exc()
 
         else:
             logging.info(': Data generators of the ' + self.modelName + ' model initialized...')
@@ -123,7 +130,7 @@ class ModelTrain():
 
         except:
             logging.error(': Callback initialization of the ' + self.modelName + ' model failed...')
-            raise ValueError('Callback initialization of the ' + self.modelName + ' model failed')
+            traceback.print_exc()
 
         else:
             logging.info(': Callback of the ' + self.modelName + ' model initialized...')
@@ -149,7 +156,7 @@ class ModelTrain():
 
         except:
             logging.error(': Training of the ' + self.modelName + ' model failed...')
-            raise ValueError('Training of the ' + self.modelName + ' model failed')
+            traceback.print_exc()
 
         else:
             logging.info(': Training of the ' + self.modelName + ' model was finished...')
@@ -178,7 +185,7 @@ class ModelTrain():
         
         except:
             logging.error(': Visualisation of the ' + self.modelName + ' model results failed...')
-            raise ValueError('Visualisation of the ' + self.modelName + ' model results failed')
+            traceback.print_exc()
 
         else:
             logging.info(': Visualisation of the ' + self.modelName + ' model results was finished...')
