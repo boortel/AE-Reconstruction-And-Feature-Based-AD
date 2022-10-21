@@ -1,0 +1,4 @@
+# Ignore the models and its data
+*
+*/
+!.gitignore
