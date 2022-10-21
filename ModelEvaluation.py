@@ -110,6 +110,14 @@ class ModelEvaluation():
                 color_mode = cMode,
                 class_mode = 'input',
                 shuffle = False)
+
+            self.train_generatorL = train_datagen.flow_from_directory(
+                (self.datasetPath + 'train'), 
+                target_size = tSize, 
+                batch_size = self.batchSize,
+                color_mode = cMode,
+                class_mode = 'binary',
+                shuffle = False)
             
             # Data generator for test data
             self.test_generator = test_datagen.flow_from_directory(
@@ -119,6 +127,15 @@ class ModelEvaluation():
                 color_mode = cMode,
                 class_mode = 'input',
                 shuffle = False)
+
+            self.test_generatorL = test_datagen.flow_from_directory(
+                (self.datasetPath + 'test'), 
+                target_size = tSize, 
+                batch_size = self.batchSize,
+                color_mode = cMode,
+                class_mode = 'binary',
+                shuffle = False)
+
         except:
             logging.error(': Setting up the data generators failed...')
             traceback.print_exc()
@@ -136,10 +153,12 @@ class ModelEvaluation():
             # Set the train or test data
             if actStr == 'Train':
                 data_generator = self.train_generator
-                labels = self.train_label
+                data_generatorL = self.train_generatorL
+                #labels = self.train_label
             else:
                 data_generator = self.test_generator
-                labels = self.test_label
+                data_generatorL = self.test_generatorL
+                #labels = self.test_label
 
             outputPath = os.path.join(self.modelPath, 'modelData', 'Eval_' + actStr)
 
@@ -156,6 +175,7 @@ class ModelEvaluation():
             # Get the original data to be saved in npz
             data_generator.reset()
             orig_data = np.concatenate([data_generator.next()[0] for i in range(data_generator.__len__())])
+            labels = np.concatenate([data_generatorL.next()[1] for i in range(data_generatorL.__len__())])
 
             processedData = {'Org': orig_data, 'Enc': enc_out, 'Dec': dec_out, 'Lab': labels}
             
@@ -199,7 +219,7 @@ class ModelEvaluation():
             axarr[1,0].axis('off')
             axarr[2,0].imshow(orig_data[35])
             axarr[2,0].axis('off')
-            axarr[3,0].imshow(orig_data[199])
+            axarr[3,0].imshow(orig_data[205])
             axarr[3,0].axis('off')
             
             axarr[0,1].set_title("Encoded")
@@ -209,7 +229,7 @@ class ModelEvaluation():
             axarr[1,1].axis('off')
             axarr[2,1].imshow(enc_out[35])
             axarr[2,1].axis('off')
-            axarr[3,1].imshow(enc_out[199])
+            axarr[3,1].imshow(enc_out[205])
             axarr[3,1].axis('off')
 
             axarr[0,2].set_title("Decoded")
@@ -219,11 +239,11 @@ class ModelEvaluation():
             axarr[1,2].axis('off')
             axarr[2,2].imshow(dec_out[35])
             axarr[2,2].axis('off')
-            axarr[3,2].imshow(dec_out[199])
+            axarr[3,2].imshow(dec_out[205])
             axarr[3,2].axis('off')
 
             # Save the illustration figure
-            fig.savefig(os.path.join(self.modelPath, 'modelData', self.modelName + actStr + 'AEResults.png'))
+            fig.savefig(os.path.join(self.modelPath, 'modelData', self.modelName + actStr + '_AEResults.png'))
         
         except:
             logging.error(': Data visualisation of the model ' + self.modelName + ' and its ' + actStr + ' dataset failed...')

@@ -25,8 +25,8 @@ def parse_args():
     parser = argparse.ArgumentParser(description = 'Train and evaluate models defined in the ini files of the init directory')
 
     parser.add_argument('--iniBasePath', default = './init', type = str, help = 'Path to ini files')
-    parser.add_argument('--modelTrain', default = 0  , type = int, help = 'Set to 1 if you want to train models')
-    parser.add_argument('--modelEval', default = 0  , type = int, help = 'Set to 1 if you want to evaluate models')
+    parser.add_argument('--modelTrain', default = 0, type = int, help = 'Set to 1 if you want to train models')
+    parser.add_argument('--modelEval', default = 1, type = int, help = 'Set to 1 if you want to evaluate models')
 
     args = parser.parse_args()
 
@@ -100,8 +100,10 @@ def main():
                 else:
                     logging.info(': Model ' + modelSel + ' was evaluated succesfuly...')
 
-            mClass = ModelClassification(modelSel)
-            mClass.procDataFromFile(os.path.join(modelBasePath, modelSel + labelInfo, 'modelData', 'Eval_' + 'Train' + '.npz'), 'Train')
+            mClass = ModelClassification(modelBasePath, modelSel, labelInfo, imageDim)
+
+            mClass.procDataFromFile('Train')
+            mClass.procDataFromFile('Test')
 
 if __name__ == '__main__':
     main()
