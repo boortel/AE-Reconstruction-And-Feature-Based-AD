@@ -181,7 +181,7 @@ class ModelTrain():
             axarr[1].set(xlabel = "Number of Epochs", ylabel = "Validation Loss [-]")
             
             fig.tight_layout()
-            fig.savefig(os.path.join(self.outputPath, 'modelData', self.modelName + 'Losses.png'))
+            fig.savefig(os.path.join(self.outputPath, 'modelData', self.modelName + '_Losses.png'))
         
         except:
             logging.error(': Visualisation of the ' + self.modelName + ' model results failed...')
