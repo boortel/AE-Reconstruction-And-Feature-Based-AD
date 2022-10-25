@@ -26,7 +26,7 @@ def parse_args():
 
     parser.add_argument('--iniBasePath', default = './init', type = str, help = 'Path to ini files')
     parser.add_argument('--modelTrain', default = 0, type = int, help = 'Set to 1 if you want to train models')
-    parser.add_argument('--modelEval', default = 1, type = int, help = 'Set to 1 if you want to evaluate models')
+    parser.add_argument('--modelEval', default = 0, type = int, help = 'Set to 1 if you want to evaluate models')
 
     args = parser.parse_args()
 
@@ -104,6 +104,8 @@ def main():
 
             mClass.procDataFromFile('Train')
             mClass.procDataFromFile('Test')
+
+            mClass.dataClassify()
 
 if __name__ == '__main__':
     main()

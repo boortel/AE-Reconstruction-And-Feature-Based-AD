@@ -37,7 +37,7 @@ def main():
     data_dir = args.data_path
 
     # label
-    # 0:NOK, 1:OK
+    # -1:NOK, 1:OK
 
     train_image = []
     train_label = []
@@ -75,7 +75,7 @@ def main():
                 
             elif (dirpath == data_dir + 'train/nok'):
                 train_image.append(pixels)
-                train_label.append(0)
+                train_label.append(-1)
 
             # Test images
             if (dirpath == data_dir + 'test/ok'):
@@ -84,7 +84,7 @@ def main():
                 
             elif (dirpath == data_dir + 'test/nok'):
                 test_image.append(pixels)
-                test_label.append(0)
+                test_label.append(-1)
 
             # Validation images
             if (dirpath == data_dir + 'valid/ok'):
@@ -93,7 +93,7 @@ def main():
                 
             elif (dirpath == data_dir + 'valid/nok'):
                 valid_image.append(pixels)
-                valid_label.append(0)
+                valid_label.append(-1)
 
     if train_image:
         train_images = NormalizeData(np.array(train_image))

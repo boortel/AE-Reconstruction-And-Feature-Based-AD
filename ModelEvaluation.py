@@ -177,6 +177,10 @@ class ModelEvaluation():
             orig_data = np.concatenate([data_generator.next()[0] for i in range(data_generator.__len__())])
             labels = np.concatenate([data_generatorL.next()[1] for i in range(data_generatorL.__len__())])
 
+            # Transform the labels format to -1: NOK and 1:OK
+            nokIdx = np.where(labels == 0)
+            labels[nokIdx] = -1
+
             processedData = {'Org': orig_data, 'Enc': enc_out, 'Dec': dec_out, 'Lab': labels}
             
             # Save the obtained data
