@@ -151,10 +151,9 @@ class ModelClassification():
 
         # Get metrics np array
         metrics = self.normalize2DData(np.column_stack((valuesL2, valuesMSE, valuesSSIM, valuesAvgH)))
-        #metrics = np.column_stack((valuesL2, valuesMSE, valuesSSIM, valuesAvgH))
 
         # Visualise the data
-        self.fsVisualise(metrics, labels)
+        #self.fsVisualise(metrics, labels)
 
         return metrics, labels
 
@@ -196,18 +195,18 @@ class ModelClassification():
     def dataClassify(self):
         
         # Compare AD detection algorithms
-        outliers_fraction = 0.005
+        outliers_fraction = 0.5
         anomaly_algorithms = [
             ("Robust covariance", EllipticEnvelope(contamination = outliers_fraction, support_fraction = 0.9)),
             ("One-Class SVM", svm.OneClassSVM(nu = outliers_fraction, kernel = "rbf", gamma = 0.0000001)),
             ("Isolation Forest", IsolationForest(contamination = outliers_fraction, random_state = 42)),
-            ("Local Outlier Factor", LocalOutlierFactor(n_neighbors = 15, contamination = outliers_fraction))]
+            ("Local Outlier Factor", LocalOutlierFactor(n_neighbors = 15, contamination = outliers_fraction, novelty = True))]
         
         # Visualise the data
         fig, axarr = plt.subplots(2, len(anomaly_algorithms))
         fig.set_size_inches(16, 8)
 
-        tempTitle = " Feature space visualisations " + self.modelName + " model."
+        tempTitle = "Classification results of the " + self.modelName + " AE model."
         fig.suptitle(tempTitle, fontsize=14, y=1.08)
         #fig.subplots_adjust(left=0.02, right=0.98, bottom=0.001, top=0.96, wspace=0.05, hspace=0.01)
 
@@ -223,12 +222,8 @@ class ModelClassification():
             print('Model fitting time: ' + f'{float(t1 - t0):.2f}' + 's')
 
             # Fit the data and tag outliers
-            if name == "Local Outlier Factor":
-                y_pred = algorithm.fit_predict(self.metricsTs)
-                scores = y_pred.ravel() * (-1)
-            else:
-                y_pred = algorithm.fit(self.metricsTr).predict(self.metricsTs)
-                scores = algorithm.decision_function(self.metricsTs).ravel() * (-1)
+            y_pred = algorithm.predict(self.metricsTs)
+            scores = algorithm.decision_function(self.metricsTs)#.ravel()*(-1)
 
             # Calculate evaluation metrics
             self.getEvaluationMetrics(scores, name, axarr[0][plotNum])
@@ -240,6 +235,7 @@ class ModelClassification():
 
         fig.tight_layout()
         fig.savefig(os.path.join(self.outputPath, 'modelData', self.modelName + self.actStr +'_ClassEval.png'))
+
 
     ## Visualise the feature space
     def fsVisualise(self, metrics, labels):
