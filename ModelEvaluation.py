@@ -182,7 +182,7 @@ class ModelEvaluation():
             
             # Save the obtained data to NPZ and MAT
             np.savez(outputPath, orgData = orig_data, encData = enc_out, decData = dec_out, difData = diff_data, labels = labels)
-            savemat(outputPath + '.mat', processedData, do_compression = True)
+            #savemat(outputPath + '.mat', processedData, do_compression = True)
 
             # Visualise the obtained data
             self.visualiseResults(actStr, processedData)
@@ -199,6 +199,8 @@ class ModelEvaluation():
 
     ## Visualise the results
     def visualiseResults(self, actStr, processedData):
+
+        # TODO: pridat parametr, ktery urci vykreslovane vzorky
         try:
             # Set the train or test data
             if actStr == 'Train':
