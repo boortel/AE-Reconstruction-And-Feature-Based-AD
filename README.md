@@ -2,7 +2,7 @@
 
 **Framework for the AE reconstruction and feature based AD**
 
-- Run *conda create --name <envname> --file requirements.txt* with the desired enviroment name to create a conda enviroment. Reinstall the TF2 if necessary following the instructions at: https://www.tensorflow.org/install/pip
+- Run *pip install requirements.txt* within the fresh conda Python 3.9. enviroment. Reinstall the TF2 following the instructions at: https://www.tensorflow.org/install/pip
 
 - Create an empty directory data
 
