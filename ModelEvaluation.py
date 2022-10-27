@@ -15,7 +15,7 @@ import traceback
 import numpy as np
 import matplotlib.pyplot as plt
 
-from ModelClassification import ModelClassification
+from scipy.io import savemat
 
 from keras.models import Model, load_model
 from keras.preprocessing.image import ImageDataGenerator
@@ -45,14 +45,8 @@ class ModelEvaluation():
         self.getLabels()
 
         # Encode, decode and visualise the training data
-        trainProcData = self.dataEncodeDecode('Train')
-        testProcData = self.dataEncodeDecode('Test')
-
-        # Create the classification object
-        #classifier = ModelClassification(self.modelName)
-
-        # Train the data evaluation models
-        #classifier.procDataFromDict(trainProcData, 'Train')
+        _ = self.dataEncodeDecode('Train')
+        _ = self.dataEncodeDecode('Test')
 
     ## Normalize the input data
     def NormalizeData(self, data):
@@ -177,14 +171,18 @@ class ModelEvaluation():
             orig_data = np.concatenate([data_generator.next()[0] for i in range(data_generator.__len__())])
             labels = np.concatenate([data_generatorL.next()[1] for i in range(data_generatorL.__len__())])
 
+            # Get the difference images (org - dec)
+            diff_data = np.subtract(orig_data, dec_out)
+
             # Transform the labels format to -1: NOK and 1:OK
             nokIdx = np.where(labels == 0)
             labels[nokIdx] = -1
 
-            processedData = {'Org': orig_data, 'Enc': enc_out, 'Dec': dec_out, 'Lab': labels}
+            processedData = {'Org': orig_data, 'Enc': enc_out, 'Dec': dec_out, 'Dif': diff_data, 'Lab': labels}
             
-            # Save the obtained data
-            np.savez(outputPath, orgData = orig_data, encData = enc_out, decData = dec_out, labels = labels)
+            # Save the obtained data to NPZ and MAT
+            np.savez(outputPath, orgData = orig_data, encData = enc_out, decData = dec_out, difData = diff_data, labels = labels)
+            savemat(outputPath + '.mat', processedData, do_compression = True)
 
             # Visualise the obtained data
             self.visualiseResults(actStr, processedData)
@@ -211,9 +209,12 @@ class ModelEvaluation():
             orig_data = processedData.get('Org')
             enc_out = processedData.get('Enc')
             dec_out = processedData.get('Dec')
+            diff_data = processedData.get('Dif')
 
             # Plot the encoded samples from all classes
-            fig, axarr = plt.subplots(4,3)
+            fig, axarr = plt.subplots(4,4)
+            fig.set_size_inches(16, 16)
+
             fig.suptitle('Original, encoded and decoded images of the ' + self.modelName + ' autoencoder model' + label)
             
             axarr[0,0].set_title("Original")
@@ -245,6 +246,16 @@ class ModelEvaluation():
             axarr[2,2].axis('off')
             axarr[3,2].imshow(dec_out[205])
             axarr[3,2].axis('off')
+
+            axarr[0,3].set_title("Diff image")
+            axarr[0,3].imshow(diff_data[0])
+            axarr[0,3].axis('off')
+            axarr[1,3].imshow(diff_data[27])
+            axarr[1,3].axis('off')
+            axarr[2,3].imshow(diff_data[35])
+            axarr[2,3].axis('off')
+            axarr[3,3].imshow(diff_data[205])
+            axarr[3,3].axis('off')
 
             # Save the illustration figure
             fig.savefig(os.path.join(self.modelPath, 'modelData', self.modelName + actStr + '_AEResults.png'))
