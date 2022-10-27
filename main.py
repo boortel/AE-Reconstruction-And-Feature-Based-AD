@@ -18,7 +18,7 @@ import configparser
 
 from ModelTrain import ModelTrain
 from ModelEvaluation import ModelEvaluation
-from ModelClassification import ModelClassification
+from ModelClassificationErrM import ModelClassificationErrM
 
 
 def parse_args():
@@ -100,7 +100,7 @@ def main():
                 else:
                     logging.info(': Model ' + modelSel + ' was evaluated succesfuly...')
 
-            mClass = ModelClassification(modelBasePath, modelSel, labelInfo, imageDim)
+            mClass = ModelClassificationErrM(modelBasePath, modelSel, labelInfo, imageDim)
 
             mClass.procDataFromFile('Train')
             mClass.procDataFromFile('Test')
