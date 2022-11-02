@@ -37,6 +37,11 @@ class ModelClassificationBase():
         self.labelInfo = labelInfo
         self.featExtName = ''
 
+        # Print the separator
+        print('-----------------------------------------------')
+        print("Autoencoder architecture name: ", self.modelName)
+        print('')
+
     
     ## Get data from file
     def procDataFromFile(self, actStr):
@@ -85,6 +90,11 @@ class ModelClassificationBase():
         roc_auc = roc_auc_score(self.labelsTs, scores)
         fpr, tpr, _ = roc_curve(self.labelsTs, scores)
 
+        print('-----------------------')
+        print("Model name: ", self.modelName + '_' + self.labelInfo)
+        print("Algorithm: ", name)
+        print("AUC: " + f'{float(roc_auc):.2f}')
+
         ax.plot(fpr, tpr)
         ax.set_title(name + ', AUC: ' + f'{float(roc_auc):.2f}')
         ax.set(xlabel = "False positive rate", ylabel = "True positive rate")
@@ -95,9 +105,6 @@ class ModelClassificationBase():
 
         cm = confusion_matrix(self.labelsTs, labelsPred)
 
-        print('-----------------------')
-        print("Model name: ", self.modelName + '_' + self.labelInfo)
-        print("Algorithm: ", name)
         print("Confusion matrix")
         print(cm)
 
@@ -152,6 +159,11 @@ class ModelClassificationBase():
 
     ## Visualise the feature space
     def fsVisualise(self, metrics, labels):
+
+        # Reduce the dimensionality of metrics for t-SNE transformation
+        if metrics.shape[1] > 50:
+            pca_red = PCA(n_components = 50)
+            metrics = pca_red.fit_transform(metrics)
 
         # Perform the t-SNE and feature space visualisation
         tsne_metrics = TSNE(n_components=2, perplexity=30, n_iter=1000, learning_rate=100, init='pca').fit_transform(metrics)
