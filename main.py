@@ -13,28 +13,34 @@ Please select the desired model from the module ModelSaved.py as the model argum
 import os
 import logging
 import argparse
+import warnings
 import traceback
 import configparser
 
 from ModelTrain import ModelTrain
 from ModelEvaluation import ModelEvaluation
 from ModelClassificationErrM import ModelClassificationErrM
+from ModelClassificationSIFT import ModelClassificationSIFT
 
 
+## Parse the arguments
 def parse_args():
     parser = argparse.ArgumentParser(description = 'Train and evaluate models defined in the ini files of the init directory')
 
     parser.add_argument('--iniBasePath', default = './init', type = str, help = 'Path to ini files')
     parser.add_argument('--modelTrain', default = 0, type = int, help = 'Set to 1 if you want to train models')
-    parser.add_argument('--modelEval', default = 0, type = int, help = 'Set to 1 if you want to evaluate models')
+    parser.add_argument('--modelEval', default = 1, type = int, help = 'Set to 1 if you want to evaluate models')
 
     args = parser.parse_args()
 
     return args
 
 
+## Main function
 def main():
-    """main function"""
+
+    # Supress future warnings
+    warnings.simplefilter(action='ignore', category=FutureWarning)
 
     args = parse_args()
 
@@ -68,12 +74,11 @@ def main():
 
             # Training
             modelSel = cfg.get('Training', 'modelSel', fallback = 'NaN')
-            datasetPathTr = cfg.get('Training', 'datasetPathTr', fallback = 'NaN')
+            datasetPath = cfg.get('Training', 'datasetPathTr', fallback = 'NaN')
             batchSizeTr = cfg.getint('Training', 'batchSizeTr', fallback = '0')
             numEpochTr = cfg.getint('Training', 'numEpochTr', fallback = '0')
 
             # Evaluation
-            datasetPathEv = cfg.get('Evaluation', 'datasetPathEv', fallback = 'NaN')
             labelsPath = cfg.get('Evaluation', 'labelsPath', fallback = 'NaN')
             batchSizeEv = cfg.getint('Evaluation', 'batchSizeEv', fallback = '0')
             numEpochEv = cfg.getint('Evaluation', 'numEpochEv', fallback = '0')
@@ -82,7 +87,7 @@ def main():
 
                 # Train the model
                 try:
-                    ModelTrain(modelBasePath, datasetPathTr, modelSel, labelInfo, imageDim, batchSizeTr, numEpochTr)
+                    ModelTrain(modelBasePath, datasetPath, modelSel, labelInfo, imageDim, batchSizeTr, numEpochTr)
                 except:
                     logging.error(': An error occured during the training of ' + modelSel + ' model...')
                     traceback.print_exc()
@@ -93,7 +98,7 @@ def main():
 
                 # Evaluate the model
                 try:
-                    ModelEvaluation(modelBasePath, datasetPathEv, labelsPath, modelSel, labelInfo, imageDim, batchSizeEv, numEpochEv)
+                    ModelEvaluation(modelBasePath, datasetPath, labelsPath, modelSel, labelInfo, imageDim, batchSizeEv, numEpochEv)
                 except:
                     logging.error(': An error occured during the evaluation of ' + modelSel + ' model...')
                     traceback.print_exc()
@@ -105,6 +110,13 @@ def main():
             mClass.procDataFromFile('Train')
             mClass.procDataFromFile('Test')
 
+            mClass.dataClassify()
+
+            mClass = ModelClassificationSIFT(modelBasePath, modelSel, labelInfo, imageDim, 'Points')
+
+            mClass.procDataFromFile('Train')
+            mClass.procDataFromFile('Test')
+----
             mClass.dataClassify()
 
 if __name__ == '__main__':

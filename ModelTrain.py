@@ -73,13 +73,13 @@ class ModelTrain():
             
             # Load the normalized images
             train_datagen = ImageDataGenerator(
-                rescale = 1./255) 
+                rescale = 1./255,
                 # samplewise_center = True,
                 # samplewise_std_normalization = True,
-                # rotation_range = 360,
-                # width_shift_range = 0.1,
-                # height_shift_range = 0.1,
-                # horizontal_flip = True)
+                rotation_range = 360,
+                width_shift_range = 0.05,
+                height_shift_range = 0.05,
+                horizontal_flip = True)
             
             validation_datagen = ImageDataGenerator(
                 rescale = 1./255)
