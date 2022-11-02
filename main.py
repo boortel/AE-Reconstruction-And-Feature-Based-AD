@@ -116,7 +116,7 @@ def main():
 
             mClass.procDataFromFile('Train')
             mClass.procDataFromFile('Test')
-----
+            
             mClass.dataClassify()
 
 if __name__ == '__main__':
