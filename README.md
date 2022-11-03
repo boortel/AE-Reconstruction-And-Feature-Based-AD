@@ -14,7 +14,9 @@
 
 - Create custom models in the module *ModelSaved.py* and create corresponding *ini* files in the *init* directory.
 
-**This repository is still under development and it is based on: https://github.com/boortel/CAE-VAE-AD-Preprocessing and https://github.com/boortel/SIFT-and-SURF-based-AD**
+**This repository is still under development and it is based on:**
+- https://github.com/boortel/CAE-VAE-AD-Preprocessing
+- https://github.com/boortel/SIFT-and-SURF-based-AD
 
 ## References
 
