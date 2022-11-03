@@ -2,7 +2,7 @@
 """
 Created on Wed Jan  6 17:23:05 2021
 
-@author: Šimon Bilík
+@author: Simon Bilik
 
 This module provides the autoencoder training and evaluation based on the folder dataset structure.
 
@@ -79,7 +79,6 @@ def main():
             numEpochTr = cfg.getint('Training', 'numEpochTr', fallback = '0')
 
             # Evaluation
-            labelsPath = cfg.get('Evaluation', 'labelsPath', fallback = 'NaN')
             batchSizeEv = cfg.getint('Evaluation', 'batchSizeEv', fallback = '0')
             numEpochEv = cfg.getint('Evaluation', 'numEpochEv', fallback = '0')
 
@@ -98,25 +97,25 @@ def main():
 
                 # Evaluate the model
                 try:
-                    ModelEvaluation(modelBasePath, datasetPath, labelsPath, modelSel, labelInfo, imageDim, batchSizeEv, numEpochEv)
+                    ModelEvaluation(modelBasePath, datasetPath, modelSel, labelInfo, imageDim, batchSizeEv, numEpochEv)
                 except:
                     logging.error(': An error occured during the evaluation of ' + modelSel + ' model...')
                     traceback.print_exc()
                 else:
                     logging.info(': Model ' + modelSel + ' was evaluated succesfuly...')
 
-            mClass = ModelClassificationErrM(modelBasePath, modelSel, labelInfo, imageDim)
+            #mClass = ModelClassificationErrM(modelBasePath, modelSel, labelInfo, imageDim)
 
-            mClass.procDataFromFile('Train')
-            mClass.procDataFromFile('Test')
+            #mClass.procDataFromFile('Train')
+            #mClass.procDataFromFile('Test')
 
-            mClass.dataClassify()
+            #mClass.dataClassify()
 
             mClass = ModelClassificationSIFT(modelBasePath, modelSel, labelInfo, imageDim, 'Points')
 
             mClass.procDataFromFile('Train')
             mClass.procDataFromFile('Test')
-            
+
             mClass.dataClassify()
 
 if __name__ == '__main__':

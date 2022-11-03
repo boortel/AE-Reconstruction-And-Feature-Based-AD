@@ -2,7 +2,7 @@
 """
 Created on Wed Jan  6 17:23:05 2021
 
-@author: Šimon Bilík
+@author: Simon Bilik
 
 This class returns compiled autoencoder model later used in the AE_train.py script. Feel free to define any new models if necessary.
 
