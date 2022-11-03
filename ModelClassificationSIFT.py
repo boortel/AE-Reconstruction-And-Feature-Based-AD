@@ -120,7 +120,7 @@ class ModelClassificationSIFT(ModelClassificationBase):
 
         # Initialize the metric array
         metricArray = []
-        nFeatures = 5
+        nFeatures = 10
 
         # Create SIFT detector object
         sift = cv.SIFT_create(nfeatures = nFeatures)
