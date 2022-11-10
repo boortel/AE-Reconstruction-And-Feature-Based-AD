@@ -8,24 +8,30 @@ This class returns compiled autoencoder model later used in the AE_train.py scri
 
 """
 
+import keras
 import logging
 import traceback
 import numpy as np
-
-from keras.losses import binary_crossentropy
+import tensorflow as tf
 
 from keras import optimizers
 from keras.models import Model
 from keras import backend as K
-from keras.layers import Input, Conv2D, Conv2DTranspose, MaxPooling2D, UpSampling2D, Dense, Flatten, Lambda, Reshape
+from keras.losses import binary_crossentropy
+from keras.layers import Input, Conv2D, Conv2DTranspose, MaxPooling2D, UpSampling2D, Dense, Flatten, Lambda, Reshape, BatchNormalization, LeakyReLU
 
+from ModelHelperVAE import VAE, Sampling, VQVAETrainer
+
+
+## Class with the saved models
 class ModelSaved():
 
     ## Set the constants and paths
-    def __init__(self, modelSel, imageDim, intermediateDim = 64, latentDim = 2):
+    def __init__(self, modelSel, imageDim, trainDataset, dataVariance = 0.5, intermediateDim = 64, latentDim = 100):
 
         # Global parameters
         self.modelName = modelSel
+        self.VAE = False
 
         # Image dimensions
         self.imHeight = imageDim[0]
@@ -37,15 +43,20 @@ class ModelSaved():
 
         # VAE parameters
         self.intermediateDim = intermediateDim
+        self.dataVariance = dataVariance
         self.latentDim = latentDim
+        
+        self.trainDataset = trainDataset
 
         # Initialize and return the selected model
         try:
             if self.modelName == 'VAE_C1':
                 self.model = self.build_vaeC1_model()
+                self.VAE = True
 
             elif self.modelName == 'VAE_F1':
                 self.model = self.build_vaeF1_model()
+                self.VAE = True
 
             elif self.modelName == 'BAE1':
                 self.model = self.build_bae1_model()
@@ -67,73 +78,125 @@ class ModelSaved():
         except:
             logging.error(': Initialization of the selected model: ' + self.modelName + ' failed....')
             traceback.print_exc()
-        
-
-    ## Sampling function for the VAEs
-    def sampling(self, args):
-        #z_mean, z_log_sigma = args
-        z_mean = args[0]
-        z_log_sigma = args[1]
-        epsilon = K.random_normal(shape = (K.shape(z_mean)[0], self.latentDim), mean = 0., stddev = 0.1)
-
-        return z_mean + K.exp(z_log_sigma) * epsilon
-
-
+    
+    
     ## Convolutional VAE1
     def build_vaeC1_model(self):
+        
+        input_img = Input(shape = (self.imHeight, self.imWidth, self.imChannel), name='input_layer')
+        
+        # Encode-----------------------------------------------------------
+        
+        # Block-1
+        x = Conv2D(32, kernel_size=3, strides= 2, padding='same', name='conv_1')(input_img)
+        x = BatchNormalization(name='bn_1')(x)
+        x = LeakyReLU(name='lrelu_1')(x)
+
+        # Block-2
+        x = Conv2D(64, kernel_size=3, strides= 2, padding='same', name='conv_2')(x)
+        x = BatchNormalization(name='bn_2')(x)
+        x = LeakyReLU(name='lrelu_2')(x)
+
+        # Block-3
+        x = Conv2D(64, 3, 2, padding='same', name='conv_3')(x)
+        x = BatchNormalization(name='bn_3')(x)
+        x = LeakyReLU(name='lrelu_3')(x)
+
+        # Block-4
+        x = Conv2D(64, 3, 2, padding='same', name='conv_4')(x)
+        x = BatchNormalization(name='bn_4')(x)
+        x = LeakyReLU(name='lrelu_4')(x)
+
+        # Block-5
+        x = Conv2D(64, 3, 2, padding='same', name='conv_5')(x)
+        x = BatchNormalization(name='bn_5')(x)
+        x = LeakyReLU(name='lrelu_5')(x)
+        
+        # Final Block
+        flatten = Flatten()(x)
+        z_mean = Dense(self.latentDim, name = 'mean')(flatten)
+        z_log_var = Dense(self.latentDim, name='log_var')(flatten)
+        
+        z = Sampling()([z_mean, z_log_var])
+        
+        encoder = Model(inputs = input_img, outputs = [z_mean, z_log_var, z], name="enc")
+        
+        # Decode-----------------------------------------------------------
+     
+        latent_inputs = Input(shape=(self.latentDim,))
+        
+        x = Dense(4096, activation="relu")(latent_inputs)
+        x = Reshape((8,8,64))(x)
+
+        # Block-1
+        x = Conv2DTranspose(64, 3, strides= 2, padding='same',name='conv_transpose_1')(x)
+        x = BatchNormalization(name='bn_1')(x)
+        x = LeakyReLU(name='lrelu_6')(x)
+
+        # Block-2
+        x = Conv2DTranspose(64, 3, strides= 2, padding='same', name='conv_transpose_2')(x)
+        x = BatchNormalization(name='bn_2')(x)
+        x = LeakyReLU(name='lrelu_7')(x)
+
+        # Block-3
+        x = Conv2DTranspose(64, 3, 2, padding='same', name='conv_transpose_3')(x)
+        x = BatchNormalization(name='bn_3')(x)
+        x = LeakyReLU(name='lrelu_8')(x)
+
+        # Block-4
+        x = Conv2DTranspose(32, 3, 2, padding='same', name='conv_transpose_4')(x)
+        x = BatchNormalization(name='bn_4')(x)
+        x = LeakyReLU(name='lrelu_9')(x)
+        
+        # Block-5
+        decoder_outputs = Conv2DTranspose(3, 3, 2,padding='same', activation='sigmoid', name='conv_transpose_5')(x)
+        decoder = Model(inputs = latent_inputs, outputs = decoder_outputs, name="dec")
+        
+        z_mean, z_log_var, z = encoder(input_img)
+        
+        reconstructions = decoder(z)
+        
+        vae = VAE(input_img, reconstructions, encoder, decoder, self.modelName)
+        vae.compile(optimizer = keras.optimizers.Adam())
+        
+        return vae
+    
+    
+    ## Convolutional VAE2
+    def build_vaeC2_model(self):
 
         input_img = Input(shape = (self.imHeight, self.imWidth, self.imChannel))
-
+        
         # Encode-----------------------------------------------------------
+        
         x = Conv2D(32, 3, activation="relu", strides=2, padding="same")(input_img)
         x = Conv2D(64, 3, activation="relu", strides=2, padding="same")(x)
-        x = Conv2D(64, 3, activation="relu", strides=2, padding="same")(x)
-        x = Conv2D(64, 3, activation="relu", strides=2, padding="same")(x)
-        x = Conv2D(64, 3, activation="relu", strides=2, padding="same")(x)
-
-        shape_before_flatten = K.int_shape(x)[1:]
-
-        encoder_flatten = Flatten()(x)
-        h = Dense(self.intermediateDim, activation='relu',name="h")(encoder_flatten)
+        x = Flatten()(x)
+        x = Dense(16, activation="relu")(x)
         
-        z_log_sigma = Dense(self.latentDim,name="z_log_sigma")(h)
-        z_mean = Dense(self.latentDim,name="zmean")(h)
-        z = Lambda(self.sampling)([z_mean, z_log_sigma])
-
-        encoder = Model(input_img, [z_mean, z_log_sigma, z], name = 'Encoder')
-
+        z_mean = Dense(self.latentDim, name="z_mean")(x)
+        z_log_var = Dense(self.latentDim, name="z_log_var")(x)
+        
+        z = Sampling()([z_mean, z_log_var])
+        encoder = Model(input_img, [z_mean, z_log_var, z], name="enc")
+        
         # Decode-----------------------------------------------------------
-        latent_inputs = Input(shape=(self.latentDim,), name='z_sampling')
-        x = Dense(self.intermediateDim, activation='relu', name="x")(latent_inputs)
-        x = Dense(units=np.prod(shape_before_flatten), activation='relu')(x)
-        x = Reshape(target_shape=shape_before_flatten)(x)
-
-        x = Conv2DTranspose(64, 3, activation="relu", strides=2, padding="same")(x)
-        x = Conv2DTranspose(64, 3, activation="relu", strides=2, padding="same")(x)
-        x = Conv2DTranspose(64, 3, activation="relu", strides=2, padding="same")(x)
+        latent_inputs = Input(shape=(self.latentDim,))
+        
+        x = Dense(7*7*64, activation="relu")(latent_inputs)
+        x = Reshape((7,7,64))(x)
         x = Conv2DTranspose(64, 3, activation="relu", strides=2, padding="same")(x)
         x = Conv2DTranspose(32, 3, activation="relu", strides=2, padding="same")(x)
-
-        outputs = Conv2DTranspose(1, 3, activation="sigmoid", padding="same")(x)
-
-        decoder = Model(latent_inputs, outputs, name = 'Decoder')
-
-        # Instantiate VAE model
-        outputs = decoder(encoder(input_img)[2])
-
-        reconstruction_loss = binary_crossentropy(input_img, outputs)
-        reconstruction_loss *= self.imgSize
-
-        kl_loss = 1 + z_log_sigma - K.square(z_mean) - K.exp(z_log_sigma)
-        kl_loss = K.sum(kl_loss, axis=-1)
-        kl_loss *= -0.5
-
-        vae_loss = K.mean(reconstruction_loss + kl_loss)
-
-        vae = Model(input_img, outputs, name = self.modelName)
-
-        vae.add_loss(vae_loss)
-        vae.compile(optimizer = 'adam')
+        
+        decoder_outputs = Conv2DTranspose(self.imChannel, 3, activation="sigmoid", padding="same")(x)
+        decoder = Model(latent_inputs, decoder_outputs, name="dec")
+        
+        z_mean, z_log_var, z = encoder(input_img)
+        
+        reconstructions = decoder(z)
+        
+        vae = VAE(input_img, reconstructions, encoder, decoder)
+        vae.compile(optimizer = keras.optimizers.Adam())
 
         return vae
 
@@ -144,18 +207,16 @@ class ModelSaved():
         input_img = Input(shape = (self.imHeight, self.imWidth, self.imChannel))
         
         # Encode-----------------------------------------------------------
-        h = Dense(self.intermediateDim, activation='relu')(input_img)
+        x = Dense(self.intermediateDim, activation='relu')(input_img)
 
-        z_log_sigma = Dense(self.latentDim)(h)
-        z_mean = Dense(self.latentDim)(h)
-
-        z = Lambda(self.sampling)([z_mean, z_log_sigma])
-
-        # Encoder
-        encoder = Model(input_img, [z_mean, z_log_sigma, z], name = 'Encoder')
+        z_mean = Dense(self.latentDim, name="z_mean")(x)
+        z_log_var = Dense(self.latentDim, name="z_log_var")(x)
+        
+        z = Sampling()([z_mean, z_log_var])
+        encoder = Model(input_img, [z_mean, z_log_var, z], name="enc")
 
         # Decode-----------------------------------------------------------
-        latent_inputs = Input(shape=(self.latentDim,), name='z_sampling')
+        latent_inputs = Input(shape=(self.latentDim,))
 
         x = Dense(self.intermediateDim, activation='relu')(latent_inputs)
         outputs = Dense(self.imgSize, activation='sigmoid')(x)
@@ -164,23 +225,40 @@ class ModelSaved():
         decoder = Model(latent_inputs, outputs, name = 'Decoder')
 
         # Instantiate VAE model
-        outputs = decoder(encoder(input_img)[2])
-
-        reconstruction_loss = binary_crossentropy(input_img, outputs)
-        reconstruction_loss *= self.imgSize
-
-        kl_loss = 1 + z_log_sigma - K.square(z_mean) - K.exp(z_log_sigma)
-        kl_loss = K.sum(kl_loss, axis=-1)
-        kl_loss *= -0.5
-
-        vae_loss = K.mean(reconstruction_loss + kl_loss)
-
-        vae = Model(input_img, outputs, name = self.modelName)
-
-        vae.add_loss(vae_loss)
-        vae.compile(optimizer = 'adam')
+        z_mean, z_log_var, z = encoder(input_img)
+        
+        reconstructions = decoder(z)
+        
+        vae = VAE(input_img, reconstructions, encoder, decoder)
+        vae.compile(optimizer = keras.optimizers.Adam())
 
         return vae
+
+
+    ## Convolutional VQ-VAE
+    def build_vqvaeC1_model(self):
+        input_img = Input(shape = (self.imHeight, self.imWidth, self.imChannel))
+        
+        # Encode-----------------------------------------------------------
+        x = Conv2D(32, 3, activation="relu", strides=2, padding="same")(input_img)
+        x = Conv2D(64, 3, activation="relu", strides=2, padding="same")(x)
+        encoder_outputs = Conv2D(self.latentDim, 1, padding="same")(x)
+
+        encoder = keras.Model(input_img, encoder_outputs, name="enc")
+
+        # Decode-----------------------------------------------------------
+        latent_inputs = keras.Input(shape = encoder(self.latentDim).output.shape[1:])
+
+        x = Conv2DTranspose(64, 3, activation="relu", strides=2, padding="same")(latent_inputs)
+        x = Conv2DTranspose(32, 3, activation="relu", strides=2, padding="same")(x)
+        reconstruction = Conv2DTranspose(1, 3, padding="same")(x)
+
+        decoder = keras.Model(latent_inputs, reconstruction, name="dec")
+
+        vqvae = VQVAETrainer(input_img, reconstruction, encoder, decoder, self.modelName, self.dataVariance, self.latentDim)
+        vqvae.compile(optimizer=keras.optimizers.Adam())
+
+        return vqvae
 
 
     ## Basic AE model

@@ -39,34 +39,55 @@ class ModelTrain():
         # Set image dimensions
         self.imageDim = imageDim
 
-        # Set training parameters
+        # Set model and training parameters
+        self.modelName = modelSel
         self.numEpoch = numEpoch
         self.batchSize = batchSize
-
-        # Set model
-        self.modelName = modelSel
-        modelObj = ModelSaved(self.modelName, self.imageDim, intermediateDim = 64)
-
-        self.model = modelObj.model
-
-        # Set the augmentations
-        self.transforms = Compose([
-            Rotate(limit=40),
-            RandomBrightness(limit=0.1),
-            JpegCompression(quality_lower=85, quality_upper=100, p=0.5),
-            HueSaturationValue(hue_shift_limit=20, sat_shift_limit=30, val_shift_limit=20, p=0.5),
-            RandomContrast(limit=0.2, p=0.5),
-            HorizontalFlip(),
-        ])
         
         # Set generators and callback
         self.setGenerators()
         self.setCallbacks()
 
+        # Set model
+        modelObj = ModelSaved(self.modelName, self.imageDim, self.dsTrain, intermediateDim = 64, latentDim = 100)
+
+        self.model = modelObj.model
+        self.VAE = modelObj.VAE
+
+        # Set the augmentations
+        self.transforms = Compose([
+            Rotate(),
+            RandomBrightness(),
+            RandomContrast(),
+            HorizontalFlip(),
+        ])
+
         # Train the model and visualise the results
         self.modelTrain()
         self.visualiseResults()
 
+    
+    ## Help function to map IO
+    def change_inputs(self, images):
+        
+        normalization_layer = tf.keras.layers.Rescaling(1./255)
+        x = tf.image.resize(normalization_layer(images),[self.imageDim[0], self.imageDim[1]], method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
+        
+        return x
+    
+    
+    ## Augment the image using TF library
+    def process_image(self, image):
+        
+        # Cast and normalize image
+        image = tf.image.convert_image_dtype(image, tf.float32)
+        
+        # Apply simple augmentations
+        image = tf.image.random_flip_left_right(image)
+        image = tf.image.resize(image,[self.imageDim[0], self.imageDim[1]])
+        
+        return image
+    
     
     ## Set the data generator
     def setGenerators(self):
@@ -78,10 +99,7 @@ class ModelTrain():
             if self.imageDim[2] == 3:
                 cMode = 'rgb'
             else:
-                cMode = 'gray'
-
-            # Define normalization layer
-            normalization_layer = tf.keras.layers.Rescaling(1./255)
+                cMode = 'grayscale'
 
             # Train DS
             dsTrain = tf.keras.utils.image_dataset_from_directory(
@@ -94,8 +112,8 @@ class ModelTrain():
                 shuffle = False)
 
             # Augment the dataset (with normalization) and reset its shapes
-            dsTrain = dsTrain.map(partial(self.process_data), num_parallel_calls = AUTOTUNE).prefetch(AUTOTUNE)
-            self.dsTrain = dsTrain.map(self.set_shapes, num_parallel_calls = AUTOTUNE).batch(32).prefetch(AUTOTUNE)
+            self.dsTrain = dsTrain.map(self.change_inputs)
+            #self.dsTrain = dsTrain.map(self.process_image, num_parallel_calls=AUTOTUNE)
 
             # Validation DS
             dsValid = tf.keras.utils.image_dataset_from_directory(
@@ -108,7 +126,7 @@ class ModelTrain():
                 shuffle = False)
 
             # Normalize the dataset
-            self.dsValid = dsValid.map(lambda x: (normalization_layer(x)))
+            self.dsValid = dsValid.map(self.change_inputs)
             
         except:
             logging.error(': Data generators initialization of the ' + self.modelName + ' model failed...')
@@ -133,7 +151,7 @@ class ModelTrain():
             # Configure the early stopping callback
             self.esCallBack = callbacks.EarlyStopping(
                 monitor = 'loss', 
-                patience = 6)
+                patience = 20)
 
         except:
             logging.error(': Callback initialization of the ' + self.modelName + ' model failed...')
@@ -141,53 +159,27 @@ class ModelTrain():
 
         else:
             logging.info(': Callback of the ' + self.modelName + ' model initialized...')
-
-
-    ## Help function for albumentation - aug_fn
-    def aug_fn(self, image):
-        data = {"image":image}
-        aug_data = self.transforms(**data)
-        aug_img = aug_data["image"]
-        aug_img = tf.cast(aug_img/255.0, tf.float32)
-        aug_img = tf.image.resize(aug_img, size=[self.imageDim[0], self.imageDim[1]])
-
-        return aug_img
-
-
-    ## Help function for albumentation - process data
-    def process_data(self, image, label):
-        aug_img = tf.numpy_function(func = self.aug_fn, inp = image, Tout = tf.float32)
-
-        return aug_img, label
-
-
-    ## Help function for albumentation - set shapes
-    def set_shapes(self, img, label):
-        img.set_shape(self.imageDim)
-        label.set_shape([])
-
-        return img, label
-
+            
 
     ## Compile and train the model
     def modelTrain(self):
 
         try:
-            # Define the class weights
-            class_weight = {0: 1., 
-                            1: 50.}
-
+            # Set the validation DS
+            if self.VAE:
+                valDS = None
+            else:
+                valDS = self.dsValid
+            
             # Train the model
             self.trainHistory = self.model.fit(
-                self.dsTrain,
+                x = self.dsTrain,
                 epochs = self.numEpoch,   
-                validation_data = self.dsValid, 
+                validation_data = valDS, 
                 verbose = 1,
-                class_weight = class_weight,
                 callbacks = [self.esCallBack])
                 # callbacks = [tbCallBack, esCallBack])
             
-            # Save the model
             self.model.save(self.outputPath)
 
         except:
@@ -203,8 +195,12 @@ class ModelTrain():
 
         try:
             # Plot the history and save the curves
-            train_loss = self.trainHistory.history['loss']
-            val_loss = self.trainHistory.history['val_loss']
+            if self.VAE:
+                train_loss = self.trainHistory.history['loss']
+                val_loss = self.trainHistory.history['kl_loss']
+            else:
+                train_loss = self.trainHistory.history['loss']
+                val_loss = self.trainHistory.history['val_loss']
             
             fig, axarr = plt.subplots(2)
             tempTitle = " Training and Validation Loss of " + self.modelName + " model."
