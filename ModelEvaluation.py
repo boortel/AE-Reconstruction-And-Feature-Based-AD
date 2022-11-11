@@ -141,13 +141,21 @@ class ModelEvaluation():
             
             # Get the encoded data
             encoder = Model(inputs = autoencoder.input, outputs = autoencoder.get_layer('enc').output)
-            enc_out = self.NormalizeData(encoder.predict(dataset))
+            #enc_out = self.NormalizeData(encoder.predict(dataset))
+
+            z_mean, z_log_var, _ = encoder.predict(dataset)
+            enc_out = np.dstack((z_mean, z_log_var))
 
             # Get the decoded data
             dec_out = self.NormalizeData(autoencoder.predict(dataset))
 
             # Get the original data to be saved in npz
             orig_data = np.concatenate([img for img in dataset], axis=0)
+
+            # TODO: presunout k error mtr
+            filterStrength = 0.5
+            orig_data = np.array([(filterStrength*img + (1 - filterStrength)*cv.GaussianBlur(img, (25,25), 0)) for img in orig_data])
+
             labels = np.concatenate([labels for _, labels in datasetL], axis=0)
 
             # Get the difference images (org - dec)
@@ -210,7 +218,7 @@ class ModelEvaluation():
             axarr[2,0].axis('off')
             axarr[3,0].imshow(cv.normalize(orig_data[35], None, 0, 255, cv.NORM_MINMAX, cv.CV_8U))
             axarr[3,0].axis('off')
-            
+
             #axarr[0,1].set_title("Encoded")
             #axarr[0,1].imshow(cv.normalize(enc_out[0], None, 0, 255, cv.NORM_MINMAX, cv.CV_8U))
             #axarr[0,1].axis('off')
@@ -220,6 +228,16 @@ class ModelEvaluation():
             #axarr[2,1].axis('off')
             #axarr[3,1].imshow(cv.normalize(enc_out[35], None, 0, 255, cv.NORM_MINMAX, cv.CV_8U))
             #axarr[3,1].axis('off')
+            
+            axarr[0,1].set_title("Encoded")
+            axarr[0,1].scatter(enc_out[0, :, 0], enc_out[0, :, 1], s = 4)
+            axarr[0,1].set(xlabel = "Mean", ylabel = "Variance")
+            axarr[1,1].scatter(enc_out[10, :, 0], enc_out[10, :, 1], s = 4)
+            axarr[1,1].set(xlabel = "Mean", ylabel = "Variance")
+            axarr[2,1].scatter(enc_out[25, :, 0], enc_out[25, :, 1], s = 4)
+            axarr[2,1].set(xlabel = "Mean", ylabel = "Variance")
+            axarr[3,1].scatter(enc_out[35, :, 0], enc_out[35, :, 1], s = 4)
+            axarr[3,1].set(xlabel = "Mean", ylabel = "Variance")
 
             axarr[0,2].set_title("Decoded")
             axarr[0,2].imshow(cv.normalize(dec_out[0], None, 0, 255, cv.NORM_MINMAX, cv.CV_8U))
