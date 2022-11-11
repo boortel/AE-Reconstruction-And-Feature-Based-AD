@@ -30,7 +30,7 @@ class ModelClassificationBase():
 
         # Set the base path
         self.modelName = modelSel
-        self.outputPath = os.path.join(modelBasePath, modelSel + labelInfo)
+        self.outputPath = os.path.join(modelBasePath, modelSel + '_' + labelInfo)
 
         # Set the constants
         self.imageDim = imageDim
@@ -39,7 +39,7 @@ class ModelClassificationBase():
 
         # Print the separator
         print('-----------------------------------------------')
-        print("Autoencoder architecture name: ", self.modelName)
+        print("Autoencoder architecture name: ", self.modelName + '_' + self.labelInfo)
         print('')
 
     
@@ -126,7 +126,7 @@ class ModelClassificationBase():
         fig, axarr = plt.subplots(2, len(anomaly_algorithms))
         fig.set_size_inches(16, 8)
 
-        tempTitle = "Classification results of the " + self.modelName + " AE model with " + self.featExtName + " feature extraction."
+        tempTitle = "Classification results of the " + self.modelName + '_' + self.labelInfo + " AE model with " + self.featExtName + " feature extraction."
         fig.suptitle(tempTitle, fontsize=14, y=1.08)
         #fig.subplots_adjust(left=0.02, right=0.98, bottom=0.001, top=0.96, wspace=0.05, hspace=0.01)
 
@@ -154,7 +154,7 @@ class ModelClassificationBase():
             plotNum +=1
 
         fig.tight_layout()
-        fig.savefig(os.path.join(self.outputPath, 'modelData', self.modelName + self.actStr + self.featExtName +'_ClassEval.png'))
+        fig.savefig(os.path.join(self.outputPath, 'modelData', self.modelName + '_' + self.labelInfo + self.actStr + self.featExtName +'_ClassEval.png'))
 
 
     ## Visualise the feature space
