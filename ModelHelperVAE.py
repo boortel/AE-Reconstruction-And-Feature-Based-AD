@@ -23,7 +23,7 @@ from keras.layers import Layer
 class VAE(Model):
     
     def __init__(self, inputs, outputs, encoder, decoder, modelName, **kwargs):
-        super(VAE, self).__init__(inputs, outputs, modelName, **kwargs)
+        super(VAE, self).__init__(inputs, outputs, **kwargs)
         
         self.encoder = encoder
         self.decoder = decoder
@@ -149,28 +149,17 @@ class VectorQuantizer(Layer):
 
 ## Class to define and train the VQ-VAE models
 class VQVAETrainer(Model):
-    def __init__(self, inputs, outputs, encoder, decoder, modelName, train_variance, latent_dim=32, num_embeddings=128, **kwargs):
-        super(VQVAETrainer, self).__init__(inputs, outputs, modelName, **kwargs)
+    def __init__(self, inputs, outputs, vqvae, modelName, train_variance, latent_dim=32, num_embeddings=128, **kwargs):
+        super(VQVAETrainer, self).__init__(inputs, outputs, **kwargs)
         self.train_variance = train_variance
         self.latent_dim = latent_dim
         self.num_embeddings = num_embeddings
-
-        self.vqvae = self.get_vqvae(encoder, decoder, self.latent_dim, self.num_embeddings)
+        
+        self.vqvae = vqvae
 
         self.total_loss_tracker = keras.metrics.Mean(name = "total_loss")
         self.reconstruction_loss_tracker = keras.metrics.Mean(name = "reconstruction_loss")
         self.vq_loss_tracker = keras.metrics.Mean(name = "vq_loss")
-        
-    def get_vqvae(self, encoder, decoder, latent_dim=16, num_embeddings=64):
-        vq_layer = VectorQuantizer(num_embeddings, latent_dim, name = "vector_quantizer")
-        
-        inputs = keras.Input(shape=(28, 28, 1))
-        encoder_outputs = encoder(inputs)
-        
-        quantized_latents = vq_layer(encoder_outputs)
-        reconstructions = decoder(quantized_latents)
-        
-        return keras.Model(inputs, reconstructions, name = "vq_vae")
 
     @property
     def metrics(self):

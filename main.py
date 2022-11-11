@@ -17,8 +17,7 @@ import warnings
 import traceback
 import configparser
 
-from ModelTrain import ModelTrain
-from ModelEvaluation import ModelEvaluation
+from ModelTrainAndEval import ModelTrainAndEval
 from ModelClassificationErrM import ModelClassificationErrM
 from ModelClassificationSIFT import ModelClassificationSIFT
 
@@ -28,8 +27,8 @@ def parse_args():
     parser = argparse.ArgumentParser(description = 'Train and evaluate models defined in the ini files of the init directory')
 
     parser.add_argument('--iniBasePath', default = './init', type = str, help = 'Path to ini files')
-    parser.add_argument('--modelTrain', default = 0, type = int, help = 'Set to 1 for model training')
-    parser.add_argument('--modelEval', default = 1, type = int, help = 'Set to 1 for model evaluation')
+    parser.add_argument('--modelTrain', default = True, type = bool, help = 'Set True for model training')
+    parser.add_argument('--modelEval', default = True, type = bool, help = 'Set True for model evaluation')
 
     args = parser.parse_args()
 
@@ -75,34 +74,24 @@ def main():
             # Training
             modelSel = cfg.get('Training', 'modelSel', fallback = 'NaN')
             datasetPath = cfg.get('Training', 'datasetPathTr', fallback = 'NaN')
-            batchSizeTr = cfg.getint('Training', 'batchSizeTr', fallback = '0')
-            numEpochTr = cfg.getint('Training', 'numEpochTr', fallback = '0')
+            batchSize = cfg.getint('Training', 'batchSizeTr', fallback = '0')
+            numEpoch = cfg.getint('Training', 'numEpochTr', fallback = '0')
 
             # Evaluation
             batchSizeEv = cfg.getint('Evaluation', 'batchSizeEv', fallback = '0')
             numEpochEv = cfg.getint('Evaluation', 'numEpochEv', fallback = '0')
 
-            if modelTrain == 1:
+            if modelTrain or modelEval:
 
                 # Train the model
                 try:
-                    ModelTrain(modelBasePath, datasetPath, modelSel, labelInfo, imageDim, batchSizeTr, numEpochTr)
+                    ModelTrainAndEval(modelBasePath, datasetPath, modelSel, labelInfo, imageDim, batchSize, numEpoch, modelTrain, modelEval)
                 except:
-                    logging.error(': An error occured during the training of ' + modelSel + ' model...')
+                    logging.error(': An error occured during the training or evaluation of ' + modelSel + ' model...')
                     traceback.print_exc()
                 else:
                     logging.info(': Model ' + modelSel + ' was trained succesfuly...')
-            
-            if modelEval == 1:
-
-                # Evaluate the model
-                try:
-                    ModelEvaluation(modelBasePath, datasetPath, modelSel, labelInfo, imageDim, batchSizeEv, numEpochEv)
-                except:
-                    logging.error(': An error occured during the evaluation of ' + modelSel + ' model...')
-                    traceback.print_exc()
-                else:
-                    logging.info(': Model ' + modelSel + ' was evaluated succesfuly...')
+                    
 
             mClass = ModelClassificationErrM(modelBasePath, modelSel, labelInfo, imageDim)
 

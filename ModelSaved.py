@@ -20,52 +20,53 @@ from keras import backend as K
 from keras.losses import binary_crossentropy
 from keras.layers import Input, Conv2D, Conv2DTranspose, MaxPooling2D, UpSampling2D, Dense, Flatten, Lambda, Reshape, BatchNormalization, LeakyReLU
 
-from ModelHelperVAE import VAE, Sampling, VQVAETrainer
+from ModelHelperVAE import VAE, Sampling, VQVAETrainer, VectorQuantizer
 
 
 ## Class with the saved models
 class ModelSaved():
 
     ## Set the constants and paths
-    def __init__(self, modelSel, imageDim, trainDataset, dataVariance = 0.5, intermediateDim = 64, latentDim = 100):
+    def __init__(self, modelSel, imageDim, dataVariance = 0.5, intermediateDim = 64, latentDim = 16):
 
         # Global parameters
         self.modelName = modelSel
-        self.VAE = False
 
         # Image dimensions
         self.imHeight = imageDim[0]
         self.imWidth = imageDim[1]
         self.imChannel = imageDim[2]
 
-        # TODO: channel??
-        self.imgSize = self.imHeight * self.imWidth
-
         # VAE parameters
         self.intermediateDim = intermediateDim
         self.dataVariance = dataVariance
         self.latentDim = latentDim
-        
-        self.trainDataset = trainDataset
 
         # Initialize and return the selected model
         try:
             if self.modelName == 'VAE_C1':
                 self.model = self.build_vaeC1_model()
-                self.VAE = True
+                self.typeAE = 'VAE'
 
             elif self.modelName == 'VAE_F1':
                 self.model = self.build_vaeF1_model()
-                self.VAE = True
+                self.typeAE = 'VAE'
+                
+            elif self.modelName == 'VQVAE_C1':
+                self.model = self.build_vqvaeC1_model()
+                self.typeAE = 'VQVAE'
 
             elif self.modelName == 'BAE1':
                 self.model = self.build_bae1_model()
+                self.typeAE = 'AE'
 
             elif self.modelName == 'BAE2':
                 self.model = self.build_bae2_model()
+                self.typeAE = 'AE'
 
             elif self.modelName == 'MVT':
                 self.model = self.build_mvt_model()
+                self.typeAE = 'AE'
 
             # TODO: Define and add other models in the same way
 
@@ -219,7 +220,7 @@ class ModelSaved():
         latent_inputs = Input(shape=(self.latentDim,))
 
         x = Dense(self.intermediateDim, activation='relu')(latent_inputs)
-        outputs = Dense(self.imgSize, activation='sigmoid')(x)
+        outputs = Dense(self.imHeight * self.imWidth, activation='sigmoid')(x)
 
         # Decoder
         decoder = Model(latent_inputs, outputs, name = 'Decoder')
@@ -247,15 +248,24 @@ class ModelSaved():
         encoder = keras.Model(input_img, encoder_outputs, name="enc")
 
         # Decode-----------------------------------------------------------
-        latent_inputs = keras.Input(shape = encoder(self.latentDim).output.shape[1:])
+        latent_inputs = keras.Input(shape = encoder.output.shape[1:])
 
         x = Conv2DTranspose(64, 3, activation="relu", strides=2, padding="same")(latent_inputs)
         x = Conv2DTranspose(32, 3, activation="relu", strides=2, padding="same")(x)
-        reconstruction = Conv2DTranspose(1, 3, padding="same")(x)
+        outputs = Conv2DTranspose(self.imChannel, 3, padding="same")(x)
 
-        decoder = keras.Model(latent_inputs, reconstruction, name="dec")
+        decoder = keras.Model(latent_inputs, outputs, name="dec")
+        
+        # Instantiate VQ-VAE model
+        vq_layer = VectorQuantizer(32, self.latentDim, name="vector_quantizer")
+        
+        encoder_outputs = encoder(input_img)
+        quantized_latents = vq_layer(encoder_outputs)
+        reconstructions = decoder(quantized_latents)
+        
+        vqvae = keras.Model(input_img, reconstructions, name="vq_vae")
 
-        vqvae = VQVAETrainer(input_img, reconstruction, encoder, decoder, self.modelName, self.dataVariance, self.latentDim)
+        vqvae = VQVAETrainer(input_img, reconstructions, vqvae, self.modelName, self.dataVariance, self.latentDim)
         vqvae.compile(optimizer=keras.optimizers.Adam())
 
         return vqvae
