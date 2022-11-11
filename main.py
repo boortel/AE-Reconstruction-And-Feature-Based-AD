@@ -77,10 +77,6 @@ def main():
             batchSize = cfg.getint('Training', 'batchSizeTr', fallback = '0')
             numEpoch = cfg.getint('Training', 'numEpochTr', fallback = '0')
 
-            # Evaluation
-            batchSizeEv = cfg.getint('Evaluation', 'batchSizeEv', fallback = '0')
-            numEpochEv = cfg.getint('Evaluation', 'numEpochEv', fallback = '0')
-
             if modelTrain or modelEval:
 
                 # Train the model

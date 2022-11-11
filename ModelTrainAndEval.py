@@ -273,6 +273,13 @@ class ModelTrainAndEval():
             if self.typeAE == 'VAE':
                 z_mean, z_log_var, _ = encoder.predict(dataset)
                 enc_out = np.dstack((z_mean, z_log_var))
+            elif self.typeAE == 'VQVAE':
+                quantizer = self.model.get_layer("vector_quantizer")
+                encoded_outputs = encoder.predict(dataset)
+                
+                flat_enc_outputs = encoded_outputs.reshape(-1, encoded_outputs.shape[-1])
+                codebook_indices = quantizer.get_code_indices(flat_enc_outputs)
+                enc_out = codebook_indices.numpy().reshape(encoded_outputs.shape[:-1])
             else:
                 enc_out = self.NormalizeData(encoder.predict(dataset))
 
