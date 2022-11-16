@@ -9,6 +9,7 @@ This class is used for the classification of the evaluated model
 """
 
 import os
+import logging
 import imagehash
 
 import numpy as np
@@ -22,17 +23,21 @@ from ModelClassificationBase import ModelClassificationBase
 class ModelClassificationErrM(ModelClassificationBase):
 
     ## Constructor
-    def __init__(self, modelBasePath, modelSel, labelInfo, imageDim):
+    def __init__(self, modelDataPath, modelSel, layerSel, labelInfo, imageDim):
 
         # Call the parent
-        ModelClassificationBase.__init__(self, modelBasePath, modelSel, labelInfo, imageDim)
+        ModelClassificationBase.__init__(self, modelDataPath, modelSel, layerSel, labelInfo, imageDim)
 
         # Set the feature extractor name
         self.featExtName = 'ErrMetrics'
 
         # Print feature extractor identifier
-        print('Feature extraction method: ', self.featExtName)
+        print('Feature extraction method: ' + self.featExtName)
         print('-----------------------------------------------')
+        
+        logging.info('Feature extraction method: ' + self.featExtName)
+        logging.info('-----------------------------------------------')
+        
 
     ## Get data from file
     def procDataFromFile(self, actStr):
@@ -40,7 +45,7 @@ class ModelClassificationErrM(ModelClassificationBase):
         self.actStr = actStr
 
         # Build the path
-        procDatasetPath = os.path.join(self.outputPath, 'modelData', 'Eval_' + actStr + '.npz')
+        procDatasetPath = os.path.join(self.modelDataPath, 'Eval_' + actStr + '.npz')
 
         # Load the NPZ file
         procDataset = np.load(procDatasetPath)

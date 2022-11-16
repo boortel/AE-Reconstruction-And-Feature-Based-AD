@@ -10,6 +10,7 @@ This class is used for the classification of the evaluated model
 
 import os
 import time
+import logging
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -26,21 +27,17 @@ from sklearn.metrics import precision_recall_curve, auc, roc_auc_score, roc_curv
 class ModelClassificationBase():
 
     ## Set the constants and paths
-    def __init__(self, modelBasePath, modelSel, labelInfo, imageDim):
+    def __init__(self, modelDataPath, modelSel, layerSel, labelInfo, imageDim):
 
         # Set the base path
+        self.layerSel = layerSel
         self.modelName = modelSel
-        self.outputPath = os.path.join(modelBasePath, modelSel + '_' + labelInfo)
+        self.modelDataPath = modelDataPath
 
         # Set the constants
         self.imageDim = imageDim
         self.labelInfo = labelInfo
         self.featExtName = ''
-
-        # Print the separator
-        print('-----------------------------------------------')
-        print("Autoencoder architecture name: ", self.modelName + '_' + self.labelInfo)
-        print('')
 
     
     ## Get data from file
@@ -89,11 +86,12 @@ class ModelClassificationBase():
 
         roc_auc = roc_auc_score(self.labelsTs, scores)
         fpr, tpr, _ = roc_curve(self.labelsTs, scores)
-
-        print('-----------------------')
-        print("Model name: ", self.modelName + '_' + self.labelInfo)
-        print("Algorithm: ", name)
+        
+        print("Algorithm: " + name)
         print("AUC: " + f'{float(roc_auc):.2f}')
+        
+        logging.info("Algorithm: " + name)
+        logging.info("AUC: " + f'{float(roc_auc):.2f}')
 
         ax.plot(fpr, tpr)
         ax.set_title(name + ', AUC: ' + f'{float(roc_auc):.2f}')
@@ -107,6 +105,9 @@ class ModelClassificationBase():
 
         print("Confusion matrix")
         print(cm)
+        
+        logging.info("Confusion matrix")
+        logging.info(cm)
 
         ConfusionMatrixDisplay.from_predictions(self.labelsTs, labelsPred, ax = ax)
 
@@ -126,7 +127,7 @@ class ModelClassificationBase():
         fig, axarr = plt.subplots(2, len(anomaly_algorithms))
         fig.set_size_inches(16, 8)
 
-        tempTitle = "Classification results of the " + self.modelName + '_' + self.labelInfo + " AE model with " + self.featExtName + " feature extraction."
+        tempTitle = "Classification results of the " + self.layerSel + '-' + self.modelName + '_' + self.labelInfo + " AE model with " + self.featExtName + " feature extraction."
         fig.suptitle(tempTitle, fontsize=14, y=1.08)
         #fig.subplots_adjust(left=0.02, right=0.98, bottom=0.001, top=0.96, wspace=0.05, hspace=0.01)
 
@@ -140,6 +141,7 @@ class ModelClassificationBase():
             t1 = time.time()
 
             print('Model fitting time: ' + f'{float(t1 - t0):.2f}' + 's')
+            logging.info('Model fitting time: ' + f'{float(t1 - t0):.2f}' + 's')
 
             # Fit the data and tag outliers
             y_pred = algorithm.predict(self.metricsTs)
@@ -154,7 +156,7 @@ class ModelClassificationBase():
             plotNum +=1
 
         fig.tight_layout()
-        fig.savefig(os.path.join(self.outputPath, 'modelData', self.modelName + '_' + self.labelInfo + self.actStr + self.featExtName +'_ClassEval.png'))
+        fig.savefig(os.path.join(self.modelDataPath, self.layerSel + '-' + self.modelName  + '_' + self.labelInfo + '_' + self.actStr + self.featExtName +'_ClassEval.png'))
 
 
     ## Visualise the feature space
@@ -176,7 +178,7 @@ class ModelClassificationBase():
         fig, axarr = plt.subplots(2)
         fig.set_size_inches(8, 8)
 
-        tempTitle = " Feature space visualisations " + self.modelName + " model."
+        tempTitle = " Feature space visualisations " + self.layerSel + '-' + self.modelName + '_' + self.labelInfo + " model."
         fig.suptitle(tempTitle, fontsize=14, y=1.08)
 
         okIdx = np.where(labels == 1)
@@ -195,5 +197,5 @@ class ModelClassificationBase():
         axarr[1].legend(["OK", "NOK"], loc='upper right')
         
         fig.tight_layout()
-        fig.savefig(os.path.join(self.outputPath, 'modelData', self.modelName + self.actStr + self.featExtName +'_FeatureSpace.png'))
+        fig.savefig(os.path.join(self.modelDataPath, self.layerSel + '-' + self.modelName  + '_' + self.labelInfo + self.actStr + self.featExtName +'_FeatureSpace.png'))
         
