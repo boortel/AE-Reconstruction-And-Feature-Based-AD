@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 """
-Created on Thurs Oct  13 17:23:05 2022
+Created on Thurs Oct 13 2022
 
 @author: Simon Bilik
 
-This class is used for training the selected model
+This class is used for training and evaluation of the selected model
 
 """
 
@@ -17,6 +17,7 @@ import numpy as np
 import tensorflow as tf
 import matplotlib.pyplot as plt
 
+from scipy import stats
 from keras import callbacks
 from scipy.io import savemat
 from functools import partial
@@ -29,67 +30,55 @@ AUTOTUNE = tf.data.experimental.AUTOTUNE
 class ModelTrainAndEval():
 
     ## Set the constants and paths
-    def __init__(self, modelBasePath, datasetPath, modelSel, labelInfo, imageDim, batchSize, numEpoch, trainFlag, evalFlag):
+    def __init__(self, modelPath, datasetPath, model, layer, labelInfo, imageDim, batchSize, numEpoch, trainFlag, evalFlag):
         
         # Set paths
-        self.modelPath = os.path.join(modelBasePath, modelSel + '_' + labelInfo)
         self.datasetPath = datasetPath
 
-        # Create the model data directory
-        mPath = os.path.join(self.modelPath, 'modelData')
-
-        if not os.path.exists(mPath):
-            os.makedirs(mPath)
-
         # Set model and training parameters
-        self.modelName = modelSel
         self.labelInfo = labelInfo
         self.numEpoch = numEpoch
         self.batchSize = batchSize
         
         # Set image dimensions
         self.imageDim = imageDim
-                
-        # Set model type
-        if self.modelName == 'VAE_C1':
-            self.typeAE = 'VAE'
+          
+        # Set model name and save path
+        self.layerName = layer
+        self.modelName = model
+        self.modelPath = modelPath
 
-        elif self.modelName == 'VAE_F1':
-            self.typeAE = 'VAE'
+        # Get the model and its type
+        modelObj = ModelSaved(self.modelName, self.layerName, self.imageDim, dataVariance = 0.5, intermediateDim = 64, latentDim = 50, num_embeddings = 32)
 
-        elif self.modelName == 'VQVAE_C1':
-            self.typeAE = 'VQVAE'
+        self.model = modelObj.model
+        self.typeAE = modelObj.typeAE
 
-        elif self.modelName == 'BAE1':
-            self.typeAE = 'AE'
-
-        elif self.modelName == 'BAE2':
-            self.typeAE = 'AE'
-
-        elif self.modelName == 'MVT':
-            self.typeAE = 'AE'
-            
         # Set generators
         self.getGenerators()
         
-        if trainFlag:
-            # Set callbacks and model
-            self.setCallbacks()
-            
-            modelObj = ModelSaved(self.modelName, self.imageDim, intermediateDim = 64, latentDim = 50)
-            self.model = modelObj.model
+        # Print the separator
+        print('-----------------------------------------------')
+        print("Autoencoder architecture name: " + self.layerName + '-' + self.modelName  + '_' + self.labelInfo)
+        print('')
+        
+        logging.info('-----------------------------------------------')
+        logging.info("Autoencoder architecture name: " + self.layerName + '-' + self.modelName  + '_' + self.labelInfo)
+        logging.info('')
 
-            # Train the model and visualise the results
+        if trainFlag:
+            # Set callbacks, train model and visualise the results
+            self.setCallbacks()
             self.modelTrain()
         else:
             try:
                 # Load the model
                 self.model = load_model(self.modelPath)
             except:
-                logging.error(': Desired model: ' + self.modelName + ' cannot be loaded...')
+                logging.error('Desired model: ' + self.layerName + '-' + self.modelName + ' cannot be loaded...')
                 traceback.print_exc()
                 return
-        
+
         if evalFlag:
             # Encode, decode and visualise the training data
             self.dataEncodeDecode('Train')
@@ -132,7 +121,7 @@ class ModelTrainAndEval():
     ## Set the data generator
     def setGenerator(self, mode):
         
-        if self.typeAE == 'VAE' or self.typeAE == 'VQVAE' or mode == 'test':
+        if self.typeAE == 'VAE1' or self.typeAE == 'VAE2' or self.typeAE == 'VQVAE1' or mode == 'test':
             labelMode = None
         else:
             labelMode = 'int'
@@ -158,7 +147,7 @@ class ModelTrainAndEval():
         
         dsL = dsL.map(self.changeInputs)
         
-        if self.typeAE == 'VAE' or self.typeAE == 'VQVAE' or mode == 'test':
+        if self.typeAE == 'VAE1' or self.typeAE == 'VAE2' or self.typeAE == 'VQVAE1' or mode == 'test':
             ds = ds.map(self.changeInputsVAE)
         else:
             ds = ds.map(self.changeInputsAE)
@@ -188,38 +177,30 @@ class ModelTrainAndEval():
             self.dsTest, self.dsTestL =  self.setGenerator('test')
             
         except:
-            logging.error(': Data generators initialization of the ' + self.modelName + ' model failed...')
+            logging.error('Data generators initialization of the ' + self.layerName + '-' + self.modelName + ' model failed...')
             traceback.print_exc()
             return
 
         else:
-            logging.info(': Data generators of the ' + self.modelName + ' model initialized...')
+            logging.info('Data generators of the ' + self.layerName + '-' + self.modelName + ' model initialized...')
 
 
     ## Set callbacks
     def setCallbacks(self):
 
         try:
-            # Configure the tensorboard callback
-            # self.tbCallBack = tensorflow.keras.callbacks.TensorBoard(
-            #     log_dir = './data/', 
-            #     histogram_freq = 0,
-            #     update_freq = 'batch',
-            #     write_graph = True, 
-            #     write_images = True)
-            
             # Configure the early stopping callback
             self.esCallBack = callbacks.EarlyStopping(
                 monitor = 'loss', 
                 patience = 10)
 
         except:
-            logging.error(': Callback initialization of the ' + self.modelName + ' model failed...')
+            logging.error('Callback initialization of the ' + self.layerName + '-' + self.modelName + ' model failed...')
             traceback.print_exc()
             return
 
         else:
-            logging.info(': Callback of the ' + self.modelName + ' model initialized...')
+            logging.info('Callback of the ' + self.layerName + '-' + self.modelName + ' model initialized...')
             
 
     ## Compile and train the model
@@ -227,7 +208,7 @@ class ModelTrainAndEval():
 
         try:
             # Set the validation DS
-            if self.typeAE == 'VAE' or self.typeAE == 'VQVAE':
+            if self.typeAE == 'VAE1' or self.typeAE == 'VAE2' or self.typeAE == 'VQVAE1':
                 valDS = None
             else:
                 valDS = self.dsValid
@@ -239,17 +220,16 @@ class ModelTrainAndEval():
                 validation_data = valDS, 
                 verbose = 1,
                 callbacks = [self.esCallBack])
-                # callbacks = [tbCallBack, esCallBack])
             
             self.model.save(self.modelPath)
 
         except:
-            logging.error(': Training of the ' + self.modelName + ' model failed...')
+            logging.error('Training of the ' + self.layerName + '-' + self.modelName + ' model failed...')
             traceback.print_exc()
             return
 
         else:
-            logging.info(': Training of the ' + self.modelName + ' model was finished...')
+            logging.info('Training of the ' + self.layerName + '-' + self.modelName + ' model was finished...')
             self.visualiseTrainResults()
             
             
@@ -270,10 +250,10 @@ class ModelTrainAndEval():
             # Get the encoded data
             encoder = Model(inputs = self.model.input, outputs = self.model.get_layer('enc').output)
             
-            if self.typeAE == 'VAE':
+            if self.typeAE == 'VAE1' or self.typeAE == 'VAE2':
                 z_mean, z_log_var, _ = encoder.predict(dataset)
                 enc_out = np.dstack((z_mean, z_log_var))
-            elif self.typeAE == 'VQVAE':
+            elif self.typeAE == 'VQVAE1':
                 quantizer = self.model.get_layer("vector_quantizer")
                 encoded_outputs = encoder.predict(dataset)
                 
@@ -290,8 +270,8 @@ class ModelTrainAndEval():
             orig_data = self.NormalizeData(np.concatenate([img for img, _ in datasetL], axis=0))
 
             # TODO: presunout k error mtr
-            #filterStrength = 0.5
-            #orig_data = np.array([(filterStrength*img + (1 - filterStrength)*cv.GaussianBlur(img, (25,25), 0)) for img in orig_data])
+            filterStrength = 0.5
+            orig_data = np.array([(filterStrength*img + (1 - filterStrength)*cv.GaussianBlur(img, (25,25), 0)) for img in orig_data])
 
             # Get the difference images (org - dec)
             diff_data = np.subtract(orig_data, dec_out)
@@ -306,19 +286,58 @@ class ModelTrainAndEval():
             # Save the obtained data to NPZ and MAT
             outputPath = os.path.join(self.modelPath, 'modelData', 'Eval_' + actStr)
             np.savez_compressed(outputPath, orgData = orig_data, encData = enc_out, decData = dec_out, difData = diff_data, labels = labels)
-            #savemat(outputPath + '.mat', processedData, do_compression = True)
 
             # Visualise the obtained data
             self.visualiseEncDecResults(actStr, processedData)
+            
+            # Get the Pearson correlation coeff.
+            if actStr == 'Test':
+                self.getPearsonCoeff(orig_data, dec_out, labels)
         
         except:
-            logging.error(': Data encode and decode for the model ' + self.modelName + ' failed...')
+            logging.error('Data encode and decode for the model ' + self.layerName + '-' + self.modelName + ' failed...')
             traceback.print_exc()
             return
 
         else:
-            logging.info(': Data encode and decode for the model ' + self.modelName + ' was succesful...')
-
+            logging.info('Data encode and decode for the model ' + self.layerName + '-' + self.modelName + ' was succesful...')
+            
+            
+    ## Get Pearson correlation coefficient
+    def getPearsonCoeff(self, orgData, decData, labels):
+        
+        classIDs = [-1, 1]
+        classLab = ['NOK', 'OK']
+        
+        for classID, classLb in zip(classIDs, classLab):
+            # Get IDs and data
+            idx = np.where(labels == classID)
+            
+            orgDataSel = orgData[idx]
+            decDataSel = decData[idx]
+            
+            pVal = []
+            
+            # Loop through the test images
+            for imgOrg, imgDec in zip(orgDataSel, decDataSel):
+                
+                # Resize the images
+                (h, w) = imgOrg.shape[:2]
+                
+                imgOrg = cv.resize(cv.cvtColor(imgOrg, cv.COLOR_BGR2GRAY), (int(h/8), int(w/8)))
+                imgDec = cv.resize(cv.cvtColor(imgDec, cv.COLOR_BGR2GRAY), (int(h/8), int(w/8)))
+                
+                # Compute Pearson Coefficient
+                res = stats.pearsonr(imgOrg.flatten(), imgDec.flatten())
+                pVal.append(res.pvalue)
+                
+            # Compute average p-value
+            pVal = np.average(np.array(pVal))
+            
+            print('Average Pearson Coefficient: ' + f'{float(pVal):.2f}' + ' for class ' + classLb)
+            
+            logging.info('Average Pearson Coefficient: ' + f'{float(pVal):.2f}' + ' for class ' + classLb)
+            
     
     ## Visualise the results
     def visualiseTrainResults(self):
@@ -327,10 +346,10 @@ class ModelTrainAndEval():
             # Plot the history and save the curves
             train_loss = self.trainHistory.history['loss']
             
-            if self.typeAE == 'VAE':
+            if self.typeAE == 'VAE1' or self.typeAE == 'VAE2':
                 val_loss = self.trainHistory.history['kl_loss']
                 plotLabel = 'KL loss [-]'
-            elif self.typeAE == 'VQVAE':
+            elif self.typeAE == 'VQVAE1':
                 val_loss = self.trainHistory.history['vqvae_loss']
                 plotLabel = 'VQ-VAE loss [-]'
             else:
@@ -338,7 +357,7 @@ class ModelTrainAndEval():
                 plotLabel = 'Validation loss [-]'
             
             fig, axarr = plt.subplots(2)
-            tempTitle = " Training and Validation Loss of " + self.modelName + '_' + self.labelInfo + " model."
+            tempTitle = " Training and Validation Loss of " + self.layerName + '-' + self.modelName + '_' + self.labelInfo + " model."
             fig.suptitle(tempTitle, fontsize=14, y=1.08)
             
             axarr[0].plot(train_loss)
@@ -348,14 +367,14 @@ class ModelTrainAndEval():
             axarr[1].set(xlabel = 'Number of Epochs', ylabel = plotLabel)
             
             fig.tight_layout()
-            fig.savefig(os.path.join(self.modelPath, 'modelData', self.modelName + '_' + self.labelInfo + '_TrainLosses.png'))
+            fig.savefig(os.path.join(self.modelPath, 'modelData', self.layerName + '-' + self.modelName + '_' + self.labelInfo + '_TrainLosses.png'))
         
         except:
-            logging.error(': Visualisation of the ' + self.modelName + ' model results failed...')
+            logging.error('Visualisation of the ' + self.modelName + ' model training results failed...')
             traceback.print_exc()
 
         else:
-            logging.info(': Visualisation of the ' + self.modelName + ' model results was finished...')
+            logging.info('Visualisation of the ' + self.modelName + ' model training results was finished...')
             
             
     ## Visualise the results
@@ -376,7 +395,7 @@ class ModelTrainAndEval():
 
             # Plot the encoded samples from all classes
             fig, axarr = plt.subplots(4,4)
-            tempTitle = ' Original, encoded and decoded images of the ' + self.modelName + '_' + self.labelInfo + ' autoencoder model, ' + label + '.'
+            tempTitle = ' Original, encoded and decoded images of the ' + self.layerName + '-' + self.modelName + '_' + self.labelInfo + ' autoencoder model, ' + label + '.'
             
             fig.suptitle(tempTitle, fontsize=14, y=1.08)
             fig.set_size_inches(16, 16)
@@ -393,8 +412,9 @@ class ModelTrainAndEval():
             axarr[3,0].imshow(cv.normalize(orig_data[35], None, 0, 255, cv.NORM_MINMAX, cv.CV_8U))
             axarr[3,0].axis('off')
             
-            if self.typeAE == 'VAE':
-                axarr[0,1].set_title("Encoded")
+            axarr[0,1].set_title("Encoded")
+            
+            if self.typeAE == 'VAE1' or self.typeAE == 'VAE2':
                 axarr[0,1].scatter(enc_out[0, :, 0], enc_out[0, :, 1], s = 4)
                 axarr[0,1].set(xlabel = "Mean", ylabel = "Variance")
                 axarr[1,1].scatter(enc_out[10, :, 0], enc_out[10, :, 1], s = 4)
@@ -403,8 +423,9 @@ class ModelTrainAndEval():
                 axarr[2,1].set(xlabel = "Mean", ylabel = "Variance")
                 axarr[3,1].scatter(enc_out[35, :, 0], enc_out[35, :, 1], s = 4)
                 axarr[3,1].set(xlabel = "Mean", ylabel = "Variance")
+            elif self.typeAE == 'BAE1' or self.typeAE == 'BAE2':
+                pass
             else:
-                axarr[0,1].set_title("Encoded")
                 axarr[0,1].imshow(cv.normalize(enc_out[0], None, 0, 255, cv.NORM_MINMAX, cv.CV_8U))
                 axarr[0,1].axis('off')
                 axarr[1,1].imshow(cv.normalize(enc_out[10], None, 0, 255, cv.NORM_MINMAX, cv.CV_8U))
@@ -435,11 +456,11 @@ class ModelTrainAndEval():
             axarr[3,3].axis('off')
 
             # Save the illustration figure
-            fig.savefig(os.path.join(self.modelPath, 'modelData', self.modelName + '_' + self.labelInfo + '_' + actStr + '_AEResults.png'))
+            fig.savefig(os.path.join(self.modelPath, 'modelData', self.layerName + '-' + self.modelName + '_' + self.labelInfo + '_' + actStr + '_AEResults.png'))
         
         except:
-            logging.error(': Data visualisation of the model ' + self.modelName + self.labelInfo + ' and its ' + actStr + ' dataset failed...')
+            logging.error('Data visualisation of the model ' + self.layerName + '-' + self.modelName + '_' + self.labelInfo + ' and its ' + actStr + ' dataset failed...')
             traceback.print_exc()
 
         else:
-            logging.info(': Data visualisation of the model ' + self.modelName + ' and its ' + actStr + ' dataset was succesful...')
+            logging.info('Data visualisation of the model ' + self.layerName + '-' + self.modelName + ' and its ' + actStr + ' dataset was succesful...')

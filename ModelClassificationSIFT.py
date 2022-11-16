@@ -23,10 +23,10 @@ from ModelClassificationBase import ModelClassificationBase
 class ModelClassificationSIFT(ModelClassificationBase):
 
     ## Constructor
-    def __init__(self, modelBasePath, modelSel, labelInfo, imageDim, extractorType):
+    def __init__(self, modelDataPath, modelSel, layerSel, labelInfo, imageDim, extractorType):
 
         # Call the parent
-        ModelClassificationBase.__init__(self, modelBasePath, modelSel, labelInfo, imageDim)
+        ModelClassificationBase.__init__(self, modelDataPath, modelSel, layerSel, labelInfo, imageDim)
 
         # Set the feature extractor name
         self.featExtName = 'SIFTMetrics'
@@ -35,13 +35,16 @@ class ModelClassificationSIFT(ModelClassificationBase):
         if extractorType == 'Points' or extractorType == 'Features':
             self.extractorType = extractorType
         else:
-            logging.error(': Unknown type of extraction ' + extractorType)
+            logging.error('Unknown type of extraction ' + extractorType)
             traceback.print_exc()
             return
 
         # Print feature extractor identifier
-        print('Feature extraction method: ', self.featExtName)
+        print('Feature extraction method: ' + self.featExtName)
         print('-----------------------------------------------')
+        
+        logging.info('Feature extraction method: ' + self.featExtName)
+        logging.info('-----------------------------------------------')
 
     ## Get data from file
     def procDataFromFile(self, actStr):
@@ -49,7 +52,7 @@ class ModelClassificationSIFT(ModelClassificationBase):
         self.actStr = actStr
 
         # Build the path
-        procDatasetPath = os.path.join(self.outputPath, 'modelData', 'Eval_' + actStr + '.npz')
+        procDatasetPath = os.path.join(self.modelDataPath, 'Eval_' + actStr + '.npz')
 
         # Load the NPZ file
         procDataset = np.load(procDatasetPath)

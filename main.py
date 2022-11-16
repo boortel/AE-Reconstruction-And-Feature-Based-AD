@@ -49,7 +49,7 @@ def main():
     modelEval = args.modelEval
 
     # Initialize the logging
-    logging.basicConfig(level=logging.INFO, format='(%(asctime)s %(threadName)-10s %(levelname)-7s) %(message)s')
+    logging.basicConfig(filename = './ProgramLog.txt', level=logging.INFO, format='(%(asctime)s %(threadName)-10s %(levelname)-7s) %(message)s')
 
     # Initialize the config parser and the extension filter
     cfg = configparser.ConfigParser()
@@ -72,36 +72,58 @@ def main():
                         cfg.getint('General', 'imChannel', fallback = '0'))
 
             # Training
+            layerSel = cfg.get('Training', 'layerSel', fallback = 'NaN')
             modelSel = cfg.get('Training', 'modelSel', fallback = 'NaN')
-            datasetPath = cfg.get('Training', 'datasetPathTr', fallback = 'NaN')
-            batchSize = cfg.getint('Training', 'batchSizeTr', fallback = '0')
-            numEpoch = cfg.getint('Training', 'numEpochTr', fallback = '0')
+            datasetPath = cfg.get('Training', 'datasetPath', fallback = 'NaN')
+            batchSize = cfg.getint('Training', 'batchSize', fallback = '0')
+            numEpoch = cfg.getint('Training', 'numEpoch', fallback = '0')
+            
+            # Parse the layers and models names
+            layerSel = (layerSel.replace(" ", "")).split(",")
+            modelSel = (modelSel.replace(" ", "")).split(",")
+            
+            # Loop through the selected convolutional layers
+            for layer in layerSel:
 
-            if modelTrain or modelEval:
-
-                # Train the model
-                try:
-                    ModelTrainAndEval(modelBasePath, datasetPath, modelSel, labelInfo, imageDim, batchSize, numEpoch, modelTrain, modelEval)
-                except:
-                    logging.error(': An error occured during the training or evaluation of ' + modelSel + ' model...')
-                    traceback.print_exc()
-                else:
-                    logging.info(': Model ' + modelSel + ' was trained succesfuly...')
+                # Loop through the selected models
+                for model in modelSel:
                     
+                    # Set the model path
+                    modelPath = os.path.join(modelBasePath, layer + '_' + labelInfo, model)
 
-            mClass = ModelClassificationErrM(modelBasePath, modelSel, labelInfo, imageDim)
+                    # Create the model data directory
+                    modelDataPath = os.path.join(modelPath, 'modelData')
 
-            mClass.procDataFromFile('Train')
-            mClass.procDataFromFile('Test')
+                    if not os.path.exists(modelDataPath):
+                        os.makedirs(modelDataPath)
+                    
+                    if modelTrain or modelEval:
 
-            mClass.dataClassify()
+                        # Train and evaluate the model
+                        try:
+                            ModelTrainAndEval(modelPath, datasetPath, model, layer, labelInfo, imageDim, batchSize, numEpoch, modelTrain, modelEval)
+                        except:
+                            logging.error('An error occured during the training or evaluation of ' + modelSel + ' model...')
+                            traceback.print_exc()
+                        else:
+                            logging.info('Model ' + model + ' was trained succesfuly...')
 
-            mClass = ModelClassificationSIFT(modelBasePath, modelSel, labelInfo, imageDim, 'Points')
+                    if True:
 
-            mClass.procDataFromFile('Train')
-            mClass.procDataFromFile('Test')
+                        # Classify the model results 
+                        mClass = ModelClassificationErrM(modelDataPath, model, layer, labelInfo, imageDim)
 
-            mClass.dataClassify()
+                        mClass.procDataFromFile('Train')
+                        mClass.procDataFromFile('Test')
+
+                        mClass.dataClassify()
+
+                        mClass = ModelClassificationSIFT(modelDataPath, model, layer, labelInfo, imageDim, 'Points')
+
+                        mClass.procDataFromFile('Train')
+                        mClass.procDataFromFile('Test')
+
+                        mClass.dataClassify()
 
 if __name__ == '__main__':
     main()
