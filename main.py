@@ -48,12 +48,12 @@ def main():
     modelTrain = args.modelTrain
     modelEval = args.modelEval
 
-    # Initialize the logging
-    logging.basicConfig(filename = './ProgramLog.txt', level=logging.INFO, format='(%(asctime)s %(threadName)-10s %(levelname)-7s) %(message)s')
-
     # Initialize the config parser and the extension filter
     cfg = configparser.ConfigParser()
     ext = ('.ini')
+    
+    # Initialize the logging
+    logging.basicConfig(filename='./ProgramLog.txt', level=logging.INFO, format='(%(asctime)s %(levelname)-7s) %(message)s')
 
     # Loop through all ini files in the init directory
     for filename in os.listdir(iniBasePath):
@@ -81,6 +81,13 @@ def main():
             # Parse the layers and models names
             layerSel = (layerSel.replace(" ", "")).split(",")
             modelSel = (modelSel.replace(" ", "")).split(",")
+            
+            # Separate the ini files in log
+            logging.info('------------------------------------------------------------------------------------------------')
+            logging.info('                                                                                                ')
+            logging.info(labelInfo)
+            logging.info('                                                                                                ')
+            logging.info('------------------------------------------------------------------------------------------------')
             
             # Loop through the selected convolutional layers
             for layer in layerSel:

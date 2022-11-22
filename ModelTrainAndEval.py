@@ -58,10 +58,6 @@ class ModelTrainAndEval():
         self.getGenerators()
         
         # Print the separator
-        print('-----------------------------------------------')
-        print("Autoencoder architecture name: " + self.layerName + '-' + self.modelName  + '_' + self.labelInfo)
-        print('')
-        
         logging.info('-----------------------------------------------')
         logging.info("Autoencoder architecture name: " + self.layerName + '-' + self.modelName  + '_' + self.labelInfo)
         logging.info('')
@@ -89,24 +85,20 @@ class ModelTrainAndEval():
     def NormalizeData(self, data):
 
         return (data - np.min(data)) / (np.max(data) - np.min(data))
-
-    
-    ## Normalize dataset with no labels
-    def changeInputsVAE(self, images):
-        
-        normalization_layer = tf.keras.layers.Rescaling(1./255)
-        x = tf.image.resize(normalization_layer(images),[self.imageDim[0], self.imageDim[1]], method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
-        
-        return x
+        #return (data - np.mean(data)) / np.std(data)
     
     
     ## Normalize dataset with labels
     def changeInputsAE(self, images, labels):
         
         normalization_layer = tf.keras.layers.Rescaling(1./255)
-        x = tf.image.resize(normalization_layer(images),[self.imageDim[0], self.imageDim[1]], method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
+        x_norm = tf.image.resize(normalization_layer(images),[self.imageDim[0], self.imageDim[1]], method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
         
-        return x, x
+        random_values = tf.random.uniform(shape=x_norm[0, ..., -1:].shape)
+        x_noise = tf.where(random_values < 0.1, 1., x_norm)
+        x_noise = tf.where(1 - random_values < 0.1, 0., x_noise)
+        
+        return x_noise, x_norm
     
     
     ## Normalize dataset with labels
@@ -120,11 +112,6 @@ class ModelTrainAndEval():
     
     ## Set the data generator
     def setGenerator(self, mode):
-        
-        if self.typeAE == 'VAE1' or self.typeAE == 'VAE2' or self.typeAE == 'VQVAE1' or mode == 'test':
-            labelMode = None
-        else:
-            labelMode = 'int'
             
         # Returns generator with and without the labels
         ds = tf.keras.utils.image_dataset_from_directory(
@@ -132,8 +119,8 @@ class ModelTrainAndEval():
             image_size = self.tSize,
             color_mode = self.cMode,
             batch_size = self.batchSize,
-            crop_to_aspect_ratio = True,
-            label_mode = labelMode,
+            #crop_to_aspect_ratio = True,
+            label_mode = 'int',
             shuffle = False)
 
         dsL = tf.keras.utils.image_dataset_from_directory(
@@ -141,16 +128,12 @@ class ModelTrainAndEval():
             image_size = self.tSize,
             color_mode = self.cMode,
             batch_size = self.batchSize,
-            crop_to_aspect_ratio = True,
-            label_mode = 'int',
+            #crop_to_aspect_ratio = True,
+            label_mode = 'binary',
             shuffle = False)
         
         dsL = dsL.map(self.changeInputs)
-        
-        if self.typeAE == 'VAE1' or self.typeAE == 'VAE2' or self.typeAE == 'VQVAE1' or mode == 'test':
-            ds = ds.map(self.changeInputsVAE)
-        else:
-            ds = ds.map(self.changeInputsAE)
+        ds = ds.map(self.changeInputsAE)
         
         return ds, dsL
     
@@ -291,8 +274,8 @@ class ModelTrainAndEval():
             self.visualiseEncDecResults(actStr, processedData)
             
             # Get the Pearson correlation coeff.
-            if actStr == 'Test':
-                self.getPearsonCoeff(orig_data, dec_out, labels)
+            #if actStr == 'Test':
+            #    self.getPearsonCoeff(orig_data, dec_out, labels)
         
         except:
             logging.error('Data encode and decode for the model ' + self.layerName + '-' + self.modelName + ' failed...')
@@ -308,6 +291,8 @@ class ModelTrainAndEval():
         
         classIDs = [-1, 1]
         classLab = ['NOK', 'OK']
+        
+        pAvg = []
         
         for classID, classLb in zip(classIDs, classLab):
             # Get IDs and data
@@ -333,10 +318,11 @@ class ModelTrainAndEval():
                 
             # Compute average p-value
             pVal = np.average(np.array(pVal))
-            
-            print('Average Pearson Coefficient: ' + f'{float(pVal):.2f}' + ' for class ' + classLb)
+            pAvg.append(pVal)
             
             logging.info('Average Pearson Coefficient: ' + f'{float(pVal):.2f}' + ' for class ' + classLb)
+            
+        logging.info('Pearson Coefficient ratio: ' + f'{float(pAvg[0]/pAvg[1]):.2f}' + ' for model ' + self.layerName + '-' + self.modelName)
             
     
     ## Visualise the results
