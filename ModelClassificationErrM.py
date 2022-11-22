@@ -30,10 +30,6 @@ class ModelClassificationErrM(ModelClassificationBase):
 
         # Set the feature extractor name
         self.featExtName = 'ErrMetrics'
-
-        # Print feature extractor identifier
-        print('Feature extraction method: ' + self.featExtName)
-        print('-----------------------------------------------')
         
         logging.info('Feature extraction method: ' + self.featExtName)
         logging.info('-----------------------------------------------')

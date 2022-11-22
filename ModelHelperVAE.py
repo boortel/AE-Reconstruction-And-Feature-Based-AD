@@ -43,16 +43,17 @@ class VAE(Model):
     def train_step(self, data):
         with tf.GradientTape() as tape:
             # Outputs from the VAE
-            z_mean, z_log_var, z = self.encoder(data)
+            z_mean, z_log_var, z = self.encoder(data[0])
             #reconstruction = self.vae(data)
             reconstruction = self.decoder(z)
             
             # Calculate the losses.
             reconstruction_loss = tf.reduce_mean(
                 tf.reduce_sum(
-                    keras.losses.binary_crossentropy(data, reconstruction), axis=(1, 2)
+                    keras.losses.binary_crossentropy(data[1], reconstruction), axis=(1, 2)
                 )
             )
+                
             kl_loss = -0.5 * (1 + z_log_var - tf.square(z_mean) - tf.exp(z_log_var))
             kl_loss = tf.reduce_mean(tf.reduce_sum(kl_loss, axis=1))
             total_loss = reconstruction_loss + kl_loss
@@ -169,14 +170,14 @@ class VQVAETrainer(Model):
             self.vq_loss_tracker,
         ]
 
-    def train_step(self, x):
+    def train_step(self, data):
         with tf.GradientTape() as tape:
             # Outputs from the VQ-VAE
-            reconstructions = self.vqvae(x)
+            reconstructions = self.vqvae(data[0])
 
             # Calculate the losses
             reconstruction_loss = (
-                tf.reduce_mean((x - reconstructions) ** 2) / self.train_variance
+                tf.reduce_mean((data[1] - reconstructions) ** 2) / self.train_variance
             )
             total_loss = reconstruction_loss + sum(self.vqvae.losses)
 

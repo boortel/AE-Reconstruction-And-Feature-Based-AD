@@ -87,9 +87,6 @@ class ModelClassificationBase():
         roc_auc = roc_auc_score(self.labelsTs, scores)
         fpr, tpr, _ = roc_curve(self.labelsTs, scores)
         
-        print("Algorithm: " + name)
-        print("AUC: " + f'{float(roc_auc):.2f}')
-        
         logging.info("Algorithm: " + name)
         logging.info("AUC: " + f'{float(roc_auc):.2f}')
 
@@ -102,9 +99,6 @@ class ModelClassificationBase():
     def getConfusionMatrix(self, labelsPred, name, ax):
 
         cm = confusion_matrix(self.labelsTs, labelsPred)
-
-        print("Confusion matrix")
-        print(cm)
         
         logging.info("Confusion matrix")
         logging.info(cm)
@@ -140,7 +134,6 @@ class ModelClassificationBase():
             algorithm.fit(self.metricsTr)
             t1 = time.time()
 
-            print('Model fitting time: ' + f'{float(t1 - t0):.2f}' + 's')
             logging.info('Model fitting time: ' + f'{float(t1 - t0):.2f}' + 's')
 
             # Fit the data and tag outliers
