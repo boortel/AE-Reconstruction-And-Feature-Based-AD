@@ -116,21 +116,27 @@ def main():
                             logging.info('Model ' + model + ' was trained succesfuly...')
 
                     if True:
-
+                        
                         # Classify the model results 
-                        mClass = ModelClassificationErrM(modelDataPath, model, layer, labelInfo, imageDim)
+                        try:
+                            mClass = ModelClassificationErrM(modelDataPath, model, layer, labelInfo, imageDim)
 
-                        mClass.procDataFromFile('Train')
-                        mClass.procDataFromFile('Test')
+                            mClass.procDataFromFile('Train')
+                            mClass.procDataFromFile('Test')
 
-                        mClass.dataClassify()
+                            mClass.dataClassify()
+                        except:
+                            pass
+                        
+                        try:
+                            mClass = ModelClassificationSIFT(modelDataPath, model, layer, labelInfo, imageDim, 'Points')
 
-                        mClass = ModelClassificationSIFT(modelDataPath, model, layer, labelInfo, imageDim, 'Points')
+                            mClass.procDataFromFile('Train')
+                            mClass.procDataFromFile('Test')
 
-                        mClass.procDataFromFile('Train')
-                        mClass.procDataFromFile('Test')
-
-                        mClass.dataClassify()
+                            mClass.dataClassify()
+                        except:
+                            pass
 
 if __name__ == '__main__':
     main()
