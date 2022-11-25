@@ -94,6 +94,11 @@ class ModelTrainAndEval():
         normalization_layer = tf.keras.layers.Rescaling(1./255)
         x_norm = tf.image.resize(normalization_layer(images),[self.imageDim[0], self.imageDim[1]], method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
         
+        # Augment the image
+        x_norm = tf.image.random_flip_left_right(x_norm)
+        x_norm = tf.image.random_contrast(x_norm, lower=0.0, upper=1.0)
+        
+        # Add salt and pepper noise
         random_values = tf.random.uniform(shape=x_norm[0, ..., -1:].shape)
         x_noise = tf.where(random_values < 0.1, 1., x_norm)
         x_noise = tf.where(1 - random_values < 0.1, 0., x_noise)
@@ -175,7 +180,7 @@ class ModelTrainAndEval():
             # Configure the early stopping callback
             self.esCallBack = callbacks.EarlyStopping(
                 monitor = 'loss', 
-                patience = 10)
+                patience = 15)
 
         except:
             logging.error('Callback initialization of the ' + self.layerName + '-' + self.modelName + ' model failed...')
