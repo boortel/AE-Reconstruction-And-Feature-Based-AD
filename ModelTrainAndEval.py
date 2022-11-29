@@ -11,6 +11,7 @@ This class is used for training and evaluation of the selected model
 import os
 import logging
 import traceback
+import keras.models
 
 import cv2 as cv
 import numpy as np
@@ -22,7 +23,6 @@ from keras import callbacks
 from scipy.io import savemat
 from functools import partial
 from ModelSaved import ModelSaved
-from keras.models import Model, load_model
 from albumentations import Compose, RandomBrightness, JpegCompression, HueSaturationValue, RandomContrast, HorizontalFlip, Rotate
 
 AUTOTUNE = tf.data.experimental.AUTOTUNE
@@ -69,7 +69,7 @@ class ModelTrainAndEval():
         else:
             try:
                 # Load the model
-                self.model = load_model(self.modelPath)
+                self.model = keras.models.load_model(self.modelPath)
             except:
                 logging.error('Desired model: ' + self.layerName + '-' + self.modelName + ' cannot be loaded...')
                 traceback.print_exc()
@@ -95,8 +95,8 @@ class ModelTrainAndEval():
         x_norm = tf.image.resize(normalization_layer(images),[self.imageDim[0], self.imageDim[1]], method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
         
         # Augment the image
-        x_norm = tf.image.random_flip_left_right(x_norm)
-        x_norm = tf.image.random_contrast(x_norm, lower=0.0, upper=1.0)
+        #x_norm = tf.image.random_flip_left_right(x_norm)
+        #x_norm = tf.image.random_contrast(x_norm, lower=0.0, upper=1.0)
         
         # Add salt and pepper noise
         random_values = tf.random.uniform(shape=x_norm[0, ..., -1:].shape)
@@ -236,7 +236,7 @@ class ModelTrainAndEval():
                 datasetL = self.dsTestL
             
             # Get the encoded data
-            encoder = Model(inputs = self.model.input, outputs = self.model.get_layer('enc').output)
+            encoder = keras.models.Model(inputs = self.model.input, outputs = self.model.get_layer('enc').output)
             
             if self.typeAE == 'VAE1' or self.typeAE == 'VAE2':
                 z_mean, z_log_var, _ = encoder.predict(dataset)
@@ -279,8 +279,8 @@ class ModelTrainAndEval():
             self.visualiseEncDecResults(actStr, processedData)
             
             # Get the Pearson correlation coeff.
-            #if actStr == 'Test':
-            #    self.getPearsonCoeff(orig_data, dec_out, labels)
+            if actStr == 'Test':
+                self.getPearsonCoeff(orig_data, dec_out, labels)
         
         except:
             logging.error('Data encode and decode for the model ' + self.layerName + '-' + self.modelName + ' failed...')
@@ -303,8 +303,8 @@ class ModelTrainAndEval():
             # Get IDs and data
             idx = np.where(labels == classID)
             
-            orgDataSel = orgData[idx]
-            decDataSel = decData[idx]
+            orgDataSel = orgData[idx[0], :, :, :]
+            decDataSel = decData[idx[0], :, :, :]
             
             pVal = []
             
@@ -312,7 +312,8 @@ class ModelTrainAndEval():
             for imgOrg, imgDec in zip(orgDataSel, decDataSel):
                 
                 # Resize the images
-                (h, w) = imgOrg.shape[:2]
+                h = imgOrg.shape[0]
+                w = imgOrg.shape[1]
                 
                 imgOrg = cv.resize(cv.cvtColor(imgOrg, cv.COLOR_BGR2GRAY), (int(h/8), int(w/8)))
                 imgDec = cv.resize(cv.cvtColor(imgDec, cv.COLOR_BGR2GRAY), (int(h/8), int(w/8)))
@@ -326,8 +327,14 @@ class ModelTrainAndEval():
             pAvg.append(pVal)
             
             logging.info('Average Pearson Coefficient: ' + f'{float(pVal):.2f}' + ' for class ' + classLb)
-            
-        logging.info('Pearson Coefficient ratio: ' + f'{float(pAvg[0]/pAvg[1]):.2f}' + ' for model ' + self.layerName + '-' + self.modelName)
+        
+        # Compute the ratio between the Pearson coeffs by the OK and NOK data
+        if pAvg[1] == 0:
+            pRatio = 0
+        else:
+            pRatio = pAvg[0]/pAvg[1]
+
+        logging.info('Pearson Coefficient ratio: ' + f'{float(pRatio):.2f}' + ' for model ' + self.layerName + '-' + self.modelName)
             
     
     ## Visualise the results

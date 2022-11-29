@@ -18789,3 +18789,283 @@
 (2022-11-24 23:17:22,208 INFO   ) -----------------------------------------------
 (2022-11-24 23:17:22,208 INFO   ) Feature extraction method: SIFTMetrics
 (2022-11-24 23:17:22,208 INFO   ) -----------------------------------------------
+(2022-11-25 17:43:13,437 INFO   ) ------------------------------------------------------------------------------------------------
+(2022-11-25 17:43:13,437 INFO   )                                                                                                 
+(2022-11-25 17:43:13,437 INFO   ) Cookie_OCC
+(2022-11-25 17:43:13,437 INFO   )                                                                                                 
+(2022-11-25 17:43:13,437 INFO   ) ------------------------------------------------------------------------------------------------
+(2022-11-25 17:43:14,991 INFO   ) Data generators of the ConvM4-BAE1 model initialized...
+(2022-11-25 17:43:14,991 INFO   ) -----------------------------------------------
+(2022-11-25 17:43:14,992 INFO   ) Autoencoder architecture name: ConvM4-BAE1_Cookie_OCC
+(2022-11-25 17:43:14,992 INFO   ) 
+(2022-11-25 17:43:14,992 INFO   ) Callback of the ConvM4-BAE1 model initialized...
+(2022-11-25 17:44:43,028 ERROR  ) Training of the ConvM4-BAE1 model failed...
+(2022-11-25 17:45:38,621 ERROR  ) Data encode and decode for the model ConvM4-BAE1 failed...
+(2022-11-25 17:46:47,408 INFO   ) Data visualisation of the model ConvM4-BAE1 and its Test dataset was succesful...
+(2022-11-25 17:46:47,408 INFO   ) Data encode and decode for the model ConvM4-BAE1 was succesful...
+(2022-11-25 17:46:47,408 INFO   ) Model BAE1 was trained succesfuly...
+(2022-11-25 17:46:47,408 INFO   ) Feature extraction method: ErrMetrics
+(2022-11-25 17:46:47,408 INFO   ) -----------------------------------------------
+(2022-11-25 17:48:04,955 INFO   ) Model fitting time: 0.98s
+(2022-11-25 17:48:04,968 INFO   ) Algorithm: Robust covariance
+(2022-11-25 17:48:04,968 INFO   ) AUC: 0.63
+(2022-11-25 17:48:04,978 INFO   ) Confusion matrix
+(2022-11-25 17:48:04,978 INFO   ) [[198   2]
+ [200   0]]
+(2022-11-25 17:48:05,074 INFO   ) Model fitting time: 0.04s
+(2022-11-25 17:48:05,147 INFO   ) Algorithm: One-Class SVM
+(2022-11-25 17:48:05,148 INFO   ) AUC: 0.65
+(2022-11-25 17:48:05,152 INFO   ) Confusion matrix
+(2022-11-25 17:48:05,153 INFO   ) [[ 63 137]
+ [ 11 189]]
+(2022-11-25 17:48:05,619 INFO   ) Model fitting time: 0.42s
+(2022-11-25 17:48:05,797 INFO   ) Algorithm: Isolation Forest
+(2022-11-25 17:48:05,798 INFO   ) AUC: 0.64
+(2022-11-25 17:48:05,803 INFO   ) Confusion matrix
+(2022-11-25 17:48:05,803 INFO   ) [[152  48]
+ [132  68]]
+(2022-11-25 17:48:05,861 INFO   ) Model fitting time: 0.01s
+(2022-11-25 17:48:05,872 INFO   ) Algorithm: Local Outlier Factor
+(2022-11-25 17:48:05,872 INFO   ) AUC: 0.62
+(2022-11-25 17:48:05,877 INFO   ) Confusion matrix
+(2022-11-25 17:48:05,877 INFO   ) [[157  43]
+ [149  51]]
+(2022-11-25 17:48:06,727 INFO   ) Feature extraction method: SIFTMetrics
+(2022-11-25 17:48:06,728 INFO   ) -----------------------------------------------
+(2022-11-25 17:48:59,050 INFO   ) Model fitting time: 1.15s
+(2022-11-25 17:48:59,058 INFO   ) Algorithm: Robust covariance
+(2022-11-25 17:48:59,058 INFO   ) AUC: 0.41
+(2022-11-25 17:48:59,065 INFO   ) Confusion matrix
+(2022-11-25 17:48:59,065 INFO   ) [[105  95]
+ [137  63]]
+(2022-11-25 17:48:59,163 INFO   ) Model fitting time: 0.03s
+(2022-11-25 17:48:59,188 INFO   ) Algorithm: One-Class SVM
+(2022-11-25 17:48:59,188 INFO   ) AUC: 0.34
+(2022-11-25 17:48:59,190 INFO   ) Confusion matrix
+(2022-11-25 17:48:59,190 INFO   ) [[  3 197]
+ [  3 197]]
+(2022-11-25 17:48:59,406 INFO   ) Model fitting time: 0.19s
+(2022-11-25 17:48:59,501 INFO   ) Algorithm: Isolation Forest
+(2022-11-25 17:48:59,501 INFO   ) AUC: 0.40
+(2022-11-25 17:48:59,503 INFO   ) Confusion matrix
+(2022-11-25 17:48:59,503 INFO   ) [[123  77]
+ [152  48]]
+(2022-11-25 17:48:59,546 INFO   ) Model fitting time: 0.02s
+(2022-11-25 17:48:59,566 INFO   ) Algorithm: Local Outlier Factor
+(2022-11-25 17:48:59,566 INFO   ) AUC: 0.56
+(2022-11-25 17:48:59,569 INFO   ) Confusion matrix
+(2022-11-25 17:48:59,569 INFO   ) [[129  71]
+ [111  89]]
+(2022-11-25 18:30:43,622 INFO   ) ------------------------------------------------------------------------------------------------
+(2022-11-25 18:30:43,622 INFO   )                                                                                                 
+(2022-11-25 18:30:43,622 INFO   ) Cookie_OCC
+(2022-11-25 18:30:43,622 INFO   )                                                                                                 
+(2022-11-25 18:30:43,622 INFO   ) ------------------------------------------------------------------------------------------------
+(2022-11-25 18:30:45,706 INFO   ) Data generators of the ConvM4-BAE1 model initialized...
+(2022-11-25 18:30:45,707 INFO   ) -----------------------------------------------
+(2022-11-25 18:30:45,707 INFO   ) Autoencoder architecture name: ConvM4-BAE1_Cookie_OCC
+(2022-11-25 18:30:45,707 INFO   ) 
+(2022-11-25 18:30:45,711 ERROR  ) Desired model: ConvM4-BAE1 cannot be loaded...
+(2022-11-25 18:30:45,713 INFO   ) Model BAE1 was trained succesfuly...
+(2022-11-25 18:30:45,713 INFO   ) Feature extraction method: ErrMetrics
+(2022-11-25 18:30:45,713 INFO   ) -----------------------------------------------
+(2022-11-25 18:30:45,713 INFO   ) Feature extraction method: SIFTMetrics
+(2022-11-25 18:30:45,714 INFO   ) -----------------------------------------------
+(2022-11-28 17:46:20,945 INFO   ) ------------------------------------------------------------------------------------------------
+(2022-11-28 17:46:20,946 INFO   )                                                                                                 
+(2022-11-28 17:46:20,946 INFO   ) Cookie_OCC
+(2022-11-28 17:46:20,946 INFO   )                                                                                                 
+(2022-11-28 17:46:20,946 INFO   ) ------------------------------------------------------------------------------------------------
+(2022-11-28 17:46:22,664 INFO   ) Data generators of the ConvM4-BAE1 model initialized...
+(2022-11-28 17:46:22,664 INFO   ) -----------------------------------------------
+(2022-11-28 17:46:22,664 INFO   ) Autoencoder architecture name: ConvM4-BAE1_Cookie_OCC
+(2022-11-28 17:46:22,664 INFO   ) 
+(2022-11-29 10:21:20,126 INFO   ) ------------------------------------------------------------------------------------------------
+(2022-11-29 10:21:20,127 INFO   )                                                                                                 
+(2022-11-29 10:21:20,127 INFO   ) Cookie_OCC
+(2022-11-29 10:21:20,127 INFO   )                                                                                                 
+(2022-11-29 10:21:20,127 INFO   ) ------------------------------------------------------------------------------------------------
+(2022-11-29 10:21:21,748 INFO   ) Data generators of the ConvM4-BAE1 model initialized...
+(2022-11-29 10:21:21,752 INFO   ) -----------------------------------------------
+(2022-11-29 10:21:21,752 INFO   ) Autoencoder architecture name: ConvM4-BAE1_Cookie_OCC
+(2022-11-29 10:21:21,752 INFO   ) 
+(2022-11-29 10:26:17,754 INFO   ) ------------------------------------------------------------------------------------------------
+(2022-11-29 10:26:17,755 INFO   )                                                                                                 
+(2022-11-29 10:26:17,755 INFO   ) Cookie_OCC
+(2022-11-29 10:26:17,755 INFO   )                                                                                                 
+(2022-11-29 10:26:17,755 INFO   ) ------------------------------------------------------------------------------------------------
+(2022-11-29 10:26:49,197 INFO   ) Data generators of the ConvM4-BAE1 model initialized...
+(2022-11-29 10:26:50,898 INFO   ) -----------------------------------------------
+(2022-11-29 10:26:52,935 INFO   ) Autoencoder architecture name: ConvM4-BAE1_Cookie_OCC
+(2022-11-29 10:26:53,780 INFO   ) 
+(2022-11-29 10:27:38,615 INFO   ) ------------------------------------------------------------------------------------------------
+(2022-11-29 10:27:38,615 INFO   )                                                                                                 
+(2022-11-29 10:27:38,615 INFO   ) Cookie_OCC
+(2022-11-29 10:27:38,615 INFO   )                                                                                                 
+(2022-11-29 10:27:38,615 INFO   ) ------------------------------------------------------------------------------------------------
+(2022-11-29 10:27:40,523 INFO   ) Data generators of the ConvM4-BAE1 model initialized...
+(2022-11-29 10:27:40,523 INFO   ) -----------------------------------------------
+(2022-11-29 10:27:40,523 INFO   ) Autoencoder architecture name: ConvM4-BAE1_Cookie_OCC
+(2022-11-29 10:27:40,523 INFO   ) 
+(2022-11-29 10:29:51,731 INFO   ) ------------------------------------------------------------------------------------------------
+(2022-11-29 10:29:51,731 INFO   )                                                                                                 
+(2022-11-29 10:29:51,731 INFO   ) Cookie_OCC
+(2022-11-29 10:29:51,732 INFO   )                                                                                                 
+(2022-11-29 10:29:51,732 INFO   ) ------------------------------------------------------------------------------------------------
+(2022-11-29 10:29:53,735 INFO   ) Data generators of the ConvM4-BAE1 model initialized...
+(2022-11-29 10:29:53,736 INFO   ) -----------------------------------------------
+(2022-11-29 10:29:53,736 INFO   ) Autoencoder architecture name: ConvM4-BAE1_Cookie_OCC
+(2022-11-29 10:29:53,736 INFO   ) 
+(2022-11-29 10:41:15,999 INFO   ) ------------------------------------------------------------------------------------------------
+(2022-11-29 10:41:15,999 INFO   )                                                                                                 
+(2022-11-29 10:41:15,999 INFO   ) Cookie_OCC
+(2022-11-29 10:41:15,999 INFO   )                                                                                                 
+(2022-11-29 10:41:15,999 INFO   ) ------------------------------------------------------------------------------------------------
+(2022-11-29 10:41:17,691 INFO   ) Data generators of the ConvM4-BAE1 model initialized...
+(2022-11-29 10:41:17,691 INFO   ) -----------------------------------------------
+(2022-11-29 10:41:17,691 INFO   ) Autoencoder architecture name: ConvM4-BAE1_Cookie_OCC
+(2022-11-29 10:41:17,691 INFO   ) 
+(2022-11-29 10:41:17,692 INFO   ) Callback of the ConvM4-BAE1 model initialized...
+(2022-11-29 10:49:17,636 ERROR  ) Training of the ConvM4-BAE1 model failed...
+(2022-11-29 10:49:19,018 ERROR  ) Data encode and decode for the model ConvM4-BAE1 failed...
+(2022-11-29 10:49:19,656 ERROR  ) Data encode and decode for the model ConvM4-BAE1 failed...
+(2022-11-29 10:49:19,688 INFO   ) Model BAE1 was trained succesfuly...
+(2022-11-29 10:49:19,689 INFO   ) Feature extraction method: ErrMetrics
+(2022-11-29 10:49:19,689 INFO   ) -----------------------------------------------
+(2022-11-29 10:49:20,322 INFO   ) Feature extraction method: SIFTMetrics
+(2022-11-29 10:49:20,322 INFO   ) -----------------------------------------------
+(2022-11-29 10:49:37,281 INFO   ) ------------------------------------------------------------------------------------------------
+(2022-11-29 10:49:37,281 INFO   )                                                                                                 
+(2022-11-29 10:49:37,281 INFO   ) Cookie_OCC
+(2022-11-29 10:49:37,281 INFO   )                                                                                                 
+(2022-11-29 10:49:37,281 INFO   ) ------------------------------------------------------------------------------------------------
+(2022-11-29 10:49:39,055 INFO   ) Data generators of the ConvM4-BAE1 model initialized...
+(2022-11-29 10:49:39,055 INFO   ) -----------------------------------------------
+(2022-11-29 10:49:39,055 INFO   ) Autoencoder architecture name: ConvM4-BAE1_Cookie_OCC
+(2022-11-29 10:49:39,055 INFO   ) 
+(2022-11-29 10:49:39,056 INFO   ) Callback of the ConvM4-BAE1 model initialized...
+(2022-11-29 10:59:58,734 WARNING) Found untraced functions such as _jit_compiled_convolution_op, _jit_compiled_convolution_op, _jit_compiled_convolution_op, _jit_compiled_convolution_op, _jit_compiled_convolution_op while saving (showing 5 of 5). These functions will not be directly callable after loading.
+(2022-11-29 10:59:59,633 INFO   ) Assets written to: ./data/Cookie_OCC/ConvM4_Cookie_OCC/BAE1/assets
+(2022-11-29 10:59:59,789 INFO   ) Training of the ConvM4-BAE1 model was finished...
+(2022-11-29 11:00:00,563 INFO   ) Visualisation of the BAE1 model training results was finished...
+(2022-11-29 11:03:22,390 INFO   ) Data visualisation of the model ConvM4-BAE1 and its Train dataset was succesful...
+(2022-11-29 11:03:22,390 INFO   ) Data encode and decode for the model ConvM4-BAE1 was succesful...
+(2022-11-29 11:05:01,525 INFO   ) Data visualisation of the model ConvM4-BAE1 and its Test dataset was succesful...
+(2022-11-29 11:05:59,690 INFO   ) ------------------------------------------------------------------------------------------------
+(2022-11-29 11:05:59,691 INFO   )                                                                                                 
+(2022-11-29 11:05:59,693 INFO   ) Cookie_OCC
+(2022-11-29 11:05:59,693 INFO   )                                                                                                 
+(2022-11-29 11:05:59,693 INFO   ) ------------------------------------------------------------------------------------------------
+(2022-11-29 11:06:01,708 INFO   ) Data generators of the ConvM4-BAE1 model initialized...
+(2022-11-29 11:06:01,709 INFO   ) -----------------------------------------------
+(2022-11-29 11:06:01,709 INFO   ) Autoencoder architecture name: ConvM4-BAE1_Cookie_OCC
+(2022-11-29 11:06:01,709 INFO   ) 
+(2022-11-29 11:09:23,484 INFO   ) ------------------------------------------------------------------------------------------------
+(2022-11-29 11:09:23,484 INFO   )                                                                                                 
+(2022-11-29 11:09:23,484 INFO   ) Cookie_OCC
+(2022-11-29 11:09:23,484 INFO   )                                                                                                 
+(2022-11-29 11:09:23,484 INFO   ) ------------------------------------------------------------------------------------------------
+(2022-11-29 11:09:25,603 INFO   ) Data generators of the ConvM4-BAE1 model initialized...
+(2022-11-29 11:09:25,604 INFO   ) -----------------------------------------------
+(2022-11-29 11:09:25,604 INFO   ) Autoencoder architecture name: ConvM4-BAE1_Cookie_OCC
+(2022-11-29 11:09:25,604 INFO   ) 
+(2022-11-29 11:09:25,604 INFO   ) Callback of the ConvM4-BAE1 model initialized...
+(2022-11-29 11:20:27,885 WARNING) Found untraced functions such as _jit_compiled_convolution_op, _jit_compiled_convolution_op, _jit_compiled_convolution_op, _jit_compiled_convolution_op, _jit_compiled_convolution_op while saving (showing 5 of 5). These functions will not be directly callable after loading.
+(2022-11-29 11:20:28,791 INFO   ) Assets written to: ./data/Cookie_OCC/ConvM4_Cookie_OCC/BAE1/assets
+(2022-11-29 11:20:28,958 INFO   ) Training of the ConvM4-BAE1 model was finished...
+(2022-11-29 11:20:29,881 INFO   ) Visualisation of the BAE1 model training results was finished...
+(2022-11-29 11:23:37,338 INFO   ) Data visualisation of the model ConvM4-BAE1 and its Train dataset was succesful...
+(2022-11-29 11:23:37,338 INFO   ) Data encode and decode for the model ConvM4-BAE1 was succesful...
+(2022-11-29 11:24:49,327 INFO   ) Data visualisation of the model ConvM4-BAE1 and its Test dataset was succesful...
+(2022-11-29 11:46:01,049 INFO   ) ------------------------------------------------------------------------------------------------
+(2022-11-29 11:46:01,049 INFO   )                                                                                                 
+(2022-11-29 11:46:01,050 INFO   ) Cookie_OCC
+(2022-11-29 11:46:01,050 INFO   )                                                                                                 
+(2022-11-29 11:46:01,050 INFO   ) ------------------------------------------------------------------------------------------------
+(2022-11-29 11:46:02,707 INFO   ) Data generators of the ConvM4-BAE1 model initialized...
+(2022-11-29 11:46:02,707 INFO   ) -----------------------------------------------
+(2022-11-29 11:46:02,707 INFO   ) Autoencoder architecture name: ConvM4-BAE1_Cookie_OCC
+(2022-11-29 11:46:02,708 INFO   ) 
+(2022-11-29 12:03:43,536 INFO   ) ------------------------------------------------------------------------------------------------
+(2022-11-29 12:03:43,536 INFO   )                                                                                                 
+(2022-11-29 12:03:43,536 INFO   ) Cookie_OCC
+(2022-11-29 12:03:43,536 INFO   )                                                                                                 
+(2022-11-29 12:03:43,536 INFO   ) ------------------------------------------------------------------------------------------------
+(2022-11-29 12:03:45,371 INFO   ) Data generators of the ConvM4-BAE1 model initialized...
+(2022-11-29 12:03:45,372 INFO   ) -----------------------------------------------
+(2022-11-29 12:03:45,372 INFO   ) Autoencoder architecture name: ConvM4-BAE1_Cookie_OCC
+(2022-11-29 12:03:45,372 INFO   ) 
+(2022-11-29 12:09:46,270 ERROR  ) Desired model: ConvM4-BAE1 cannot be loaded...
+(2022-11-29 12:09:46,275 INFO   ) Model BAE1 was trained succesfuly...
+(2022-11-29 12:09:46,277 INFO   ) Feature extraction method: ErrMetrics
+(2022-11-29 12:09:46,278 INFO   ) -----------------------------------------------
+(2022-11-29 12:09:46,886 INFO   ) Feature extraction method: SIFTMetrics
+(2022-11-29 12:09:46,887 INFO   ) -----------------------------------------------
+(2022-11-29 12:11:29,765 INFO   ) ------------------------------------------------------------------------------------------------
+(2022-11-29 12:11:29,765 INFO   )                                                                                                 
+(2022-11-29 12:11:29,765 INFO   ) Cookie_OCC
+(2022-11-29 12:11:29,765 INFO   )                                                                                                 
+(2022-11-29 12:11:29,766 INFO   ) ------------------------------------------------------------------------------------------------
+(2022-11-29 12:11:31,657 INFO   ) Data generators of the ConvM4-BAE1 model initialized...
+(2022-11-29 12:11:31,657 INFO   ) -----------------------------------------------
+(2022-11-29 12:11:31,657 INFO   ) Autoencoder architecture name: ConvM4-BAE1_Cookie_OCC
+(2022-11-29 12:11:31,657 INFO   ) 
+(2022-11-29 12:11:31,657 INFO   ) Callback of the ConvM4-BAE1 model initialized...
+(2022-11-29 12:22:33,550 WARNING) Found untraced functions such as _jit_compiled_convolution_op, _jit_compiled_convolution_op, _jit_compiled_convolution_op, _jit_compiled_convolution_op, _jit_compiled_convolution_op while saving (showing 5 of 5). These functions will not be directly callable after loading.
+(2022-11-29 12:22:34,489 INFO   ) Assets written to: ./data/Cookie_OCC/ConvM4_Cookie_OCC/BAE1/assets
+(2022-11-29 12:22:34,650 INFO   ) Training of the ConvM4-BAE1 model was finished...
+(2022-11-29 12:22:35,450 INFO   ) Visualisation of the BAE1 model training results was finished...
+(2022-11-29 12:25:36,968 INFO   ) Data visualisation of the model ConvM4-BAE1 and its Train dataset was succesful...
+(2022-11-29 12:25:36,968 INFO   ) Data encode and decode for the model ConvM4-BAE1 was succesful...
+(2022-11-29 12:26:54,261 INFO   ) Data visualisation of the model ConvM4-BAE1 and its Test dataset was succesful...
+(2022-11-29 12:29:55,391 INFO   ) ------------------------------------------------------------------------------------------------
+(2022-11-29 12:29:55,392 INFO   )                                                                                                 
+(2022-11-29 12:29:55,392 INFO   ) Cookie_OCC
+(2022-11-29 12:29:55,392 INFO   )                                                                                                 
+(2022-11-29 12:29:55,392 INFO   ) ------------------------------------------------------------------------------------------------
+(2022-11-29 12:29:57,257 INFO   ) Data generators of the ConvM4-BAE1 model initialized...
+(2022-11-29 12:29:57,257 INFO   ) -----------------------------------------------
+(2022-11-29 12:29:57,258 INFO   ) Autoencoder architecture name: ConvM4-BAE1_Cookie_OCC
+(2022-11-29 12:29:57,258 INFO   ) 
+(2022-11-29 12:29:57,258 INFO   ) Callback of the ConvM4-BAE1 model initialized...
+(2022-11-29 12:31:35,004 WARNING) Found untraced functions such as _jit_compiled_convolution_op, _jit_compiled_convolution_op, _jit_compiled_convolution_op, _jit_compiled_convolution_op, _jit_compiled_convolution_op while saving (showing 5 of 5). These functions will not be directly callable after loading.
+(2022-11-29 12:31:36,145 INFO   ) Assets written to: ./data/Cookie_OCC/ConvM4_Cookie_OCC/BAE1/assets
+(2022-11-29 12:31:36,362 INFO   ) Training of the ConvM4-BAE1 model was finished...
+(2022-11-29 12:31:37,192 INFO   ) Visualisation of the BAE1 model training results was finished...
+(2022-11-29 12:35:06,885 INFO   ) Data visualisation of the model ConvM4-BAE1 and its Train dataset was succesful...
+(2022-11-29 12:35:06,885 INFO   ) Data encode and decode for the model ConvM4-BAE1 was succesful...
+(2022-11-29 12:36:34,847 INFO   ) Data visualisation of the model ConvM4-BAE1 and its Test dataset was succesful...
+(2022-11-29 12:40:58,664 INFO   ) ------------------------------------------------------------------------------------------------
+(2022-11-29 12:40:58,664 INFO   )                                                                                                 
+(2022-11-29 12:40:58,664 INFO   ) Cookie_OCC
+(2022-11-29 12:40:58,664 INFO   )                                                                                                 
+(2022-11-29 12:40:58,664 INFO   ) ------------------------------------------------------------------------------------------------
+(2022-11-29 12:41:00,444 INFO   ) Data generators of the ConvM4-BAE1 model initialized...
+(2022-11-29 12:41:00,445 INFO   ) -----------------------------------------------
+(2022-11-29 12:41:00,445 INFO   ) Autoencoder architecture name: ConvM4-BAE1_Cookie_OCC
+(2022-11-29 12:41:00,445 INFO   ) 
+(2022-11-29 12:41:00,445 INFO   ) Callback of the ConvM4-BAE1 model initialized...
+(2022-11-29 12:42:34,977 WARNING) Found untraced functions such as _jit_compiled_convolution_op, _jit_compiled_convolution_op, _jit_compiled_convolution_op, _jit_compiled_convolution_op, _jit_compiled_convolution_op while saving (showing 5 of 5). These functions will not be directly callable after loading.
+(2022-11-29 12:42:35,940 INFO   ) Assets written to: ./data/Cookie_OCC/ConvM4_Cookie_OCC/BAE1/assets
+(2022-11-29 12:42:36,103 INFO   ) Training of the ConvM4-BAE1 model was finished...
+(2022-11-29 12:42:36,802 INFO   ) Visualisation of the BAE1 model training results was finished...
+(2022-11-29 12:45:32,342 INFO   ) Data visualisation of the model ConvM4-BAE1 and its Train dataset was succesful...
+(2022-11-29 12:45:32,342 INFO   ) Data encode and decode for the model ConvM4-BAE1 was succesful...
+(2022-11-29 12:46:50,374 INFO   ) Data visualisation of the model ConvM4-BAE1 and its Test dataset was succesful...
+(2022-11-29 12:53:50,740 INFO   ) ------------------------------------------------------------------------------------------------
+(2022-11-29 12:53:50,740 INFO   )                                                                                                 
+(2022-11-29 12:53:50,740 INFO   ) Cookie_OCC
+(2022-11-29 12:53:50,740 INFO   )                                                                                                 
+(2022-11-29 12:53:50,741 INFO   ) ------------------------------------------------------------------------------------------------
+(2022-11-29 12:53:52,604 INFO   ) Data generators of the ConvM4-BAE1 model initialized...
+(2022-11-29 12:53:52,604 INFO   ) -----------------------------------------------
+(2022-11-29 12:53:52,604 INFO   ) Autoencoder architecture name: ConvM4-BAE1_Cookie_OCC
+(2022-11-29 12:53:52,604 INFO   ) 
+(2022-11-29 12:53:52,605 INFO   ) Callback of the ConvM4-BAE1 model initialized...
+(2022-11-29 12:55:29,492 WARNING) Found untraced functions such as _jit_compiled_convolution_op, _jit_compiled_convolution_op, _jit_compiled_convolution_op, _jit_compiled_convolution_op, _jit_compiled_convolution_op while saving (showing 5 of 5). These functions will not be directly callable after loading.
+(2022-11-29 12:55:30,385 INFO   ) Assets written to: ./data/Cookie_OCC/ConvM4_Cookie_OCC/BAE1/assets
+(2022-11-29 12:55:30,600 INFO   ) Training of the ConvM4-BAE1 model was finished...
+(2022-11-29 12:55:31,306 INFO   ) Visualisation of the BAE1 model training results was finished...
+(2022-11-29 12:58:54,755 INFO   ) Data visualisation of the model ConvM4-BAE1 and its Train dataset was succesful...
+(2022-11-29 12:58:54,755 INFO   ) Data encode and decode for the model ConvM4-BAE1 was succesful...
+(2022-11-29 13:00:21,767 INFO   ) Data visualisation of the model ConvM4-BAE1 and its Test dataset was succesful...
