@@ -25,8 +25,7 @@ from ModelClassificationSIFT import ModelClassificationSIFT
 ## Parse the arguments
 def parse_args():
     parser = argparse.ArgumentParser(description = 'Train and evaluate models defined in the ini files of the init directory')
-
-    parser.add_argument('--iniBasePath', default = './init', type = str, help = 'Path to ini files')
+    
     parser.add_argument('--modelTrain', default = True, type = bool, help = 'Set True for model training')
     parser.add_argument('--modelEval', default = True, type = bool, help = 'Set True for model evaluation')
 
@@ -41,10 +40,12 @@ def main():
     # Supress future warnings
     warnings.simplefilter(action = 'ignore', category = FutureWarning)
 
+    # Ini base path
+    iniBasePath = './init'
+
     args = parse_args()
 
     # Get the arg values
-    iniBasePath = args.iniBasePath
     modelTrain = args.modelTrain
     modelEval = args.modelEval
 
