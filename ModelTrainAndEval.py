@@ -23,22 +23,18 @@ from keras import callbacks
 from scipy.io import savemat
 from functools import partial
 from ModelSaved import ModelSaved
-from albumentations import Compose, RandomBrightness, JpegCompression, HueSaturationValue, RandomContrast, HorizontalFlip, Rotate
+from skimage.metrics import structural_similarity as SSIM
 
 AUTOTUNE = tf.data.experimental.AUTOTUNE
 
 class ModelTrainAndEval():
 
     ## Set the constants and paths
-    def __init__(self, modelPath, datasetPath, model, layer, labelInfo, imageDim, batchSize, numEpoch, trainFlag, evalFlag):
-        
-        # Set paths
-        self.datasetPath = datasetPath
+    def __init__(self, modelPath, model, layer, dataGenerator, labelInfo, imageDim, numEpoch, trainFlag, evalFlag):
 
         # Set model and training parameters
         self.labelInfo = labelInfo
         self.numEpoch = numEpoch
-        self.batchSize = batchSize
         
         # Set image dimensions
         self.imageDim = imageDim
@@ -47,18 +43,18 @@ class ModelTrainAndEval():
         self.layerName = layer
         self.modelName = model
         self.modelPath = modelPath
+        
+        # Set data generator
+        self.dataGenerator = dataGenerator
 
         # Get the model and its type
         modelObj = ModelSaved(self.modelName, self.layerName, self.imageDim, dataVariance = 0.5, intermediateDim = 64, latentDim = 50, num_embeddings = 32)
 
         self.model = modelObj.model
         self.typeAE = modelObj.typeAE
-
-        # Set generators
-        self.getGenerators()
         
         # Print the separator
-        logging.info('-----------------------------------------------')
+        logging.info('------------------------------------------------------------------------------------------------')
         logging.info("Autoencoder architecture name: " + self.layerName + '-' + self.modelName  + '_' + self.labelInfo)
         logging.info('')
 
@@ -77,100 +73,7 @@ class ModelTrainAndEval():
 
         if evalFlag:
             # Encode, decode and visualise the training data
-            self.dataEncodeDecode('Train')
-            self.dataEncodeDecode('Test')
-        
-    
-    ## Normalize the input data (Evaluation)
-    def NormalizeData(self, data):
-
-        return (data - np.min(data)) / (np.max(data) - np.min(data))
-        #return (data - np.mean(data)) / np.std(data)
-    
-    
-    ## Normalize dataset with labels
-    def changeInputsAE(self, images, labels):
-        
-        normalization_layer = tf.keras.layers.Rescaling(1./255)
-        x_norm = tf.image.resize(normalization_layer(images),[self.imageDim[0], self.imageDim[1]], method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
-        
-        # Augment the image
-        #x_norm = tf.image.random_flip_left_right(x_norm)
-        #x_norm = tf.image.random_contrast(x_norm, lower=0.0, upper=1.0)
-        
-        # Add salt and pepper noise
-        random_values = tf.random.uniform(shape=x_norm[0, ..., -1:].shape)
-        x_noise = tf.where(random_values < 0.1, 1., x_norm)
-        x_noise = tf.where(1 - random_values < 0.1, 0., x_noise)
-        
-        return x_noise, x_norm
-    
-    
-    ## Normalize dataset with labels
-    def changeInputs(self, images, labels):
-        
-        normalization_layer = tf.keras.layers.Rescaling(1./255)
-        x = tf.image.resize(normalization_layer(images),[self.imageDim[0], self.imageDim[1]], method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
-        
-        return x, labels
-    
-    
-    ## Set the data generator
-    def setGenerator(self, mode):
-            
-        # Returns generator with and without the labels
-        ds = tf.keras.utils.image_dataset_from_directory(
-            (self.datasetPath + mode),
-            image_size = self.tSize,
-            color_mode = self.cMode,
-            batch_size = self.batchSize,
-            #crop_to_aspect_ratio = True,
-            label_mode = 'int',
-            shuffle = False)
-
-        dsL = tf.keras.utils.image_dataset_from_directory(
-            (self.datasetPath + mode),
-            image_size = self.tSize,
-            color_mode = self.cMode,
-            batch_size = self.batchSize,
-            #crop_to_aspect_ratio = True,
-            label_mode = 'binary',
-            shuffle = False)
-        
-        dsL = dsL.map(self.changeInputs)
-        ds = ds.map(self.changeInputsAE)
-        
-        return ds, dsL
-    
-    
-    ## Get the data generators
-    def getGenerators(self):
-
-        try:
-            # Set image dimensions
-            self.tSize = (self.imageDim[0], self.imageDim[1])
-
-            if self.imageDim[2] == 3:
-                self.cMode = 'rgb'
-            else:
-                self.cMode = 'grayscale'
-
-            # Get train DS
-            self.dsTrain, self.dsTrainL =  self.setGenerator('train')
-            
-            # Get validation DS
-            self.dsValid, self.dsValidL =  self.setGenerator('valid')
-            
-            # Get test DS
-            self.dsTest, self.dsTestL =  self.setGenerator('test')
-            
-        except:
-            logging.error('Data generators initialization of the ' + self.layerName + '-' + self.modelName + ' model failed...')
-            traceback.print_exc()
-            return
-
-        else:
-            logging.info('Data generators of the ' + self.layerName + '-' + self.modelName + ' model initialized...')
+            self.dataEncodeDecode()
 
 
     ## Set callbacks
@@ -180,7 +83,7 @@ class ModelTrainAndEval():
             # Configure the early stopping callback
             self.esCallBack = callbacks.EarlyStopping(
                 monitor = 'loss', 
-                patience = 15)
+                patience = 5)
 
         except:
             logging.error('Callback initialization of the ' + self.layerName + '-' + self.modelName + ' model failed...')
@@ -199,17 +102,17 @@ class ModelTrainAndEval():
             if self.typeAE == 'VAE1' or self.typeAE == 'VAE2' or self.typeAE == 'VQVAE1':
                 valDS = None
             else:
-                valDS = self.dsValid
+                valDS = self.dataGenerator.dsValid
             
             # Train the model
             self.trainHistory = self.model.fit(
-                x = self.dsTrain,
+                x = self.dataGenerator.dsTrain,
                 epochs = self.numEpoch,   
                 validation_data = valDS, 
                 verbose = 1,
                 callbacks = [self.esCallBack])
             
-            self.model.save(self.modelPath)
+            self.model.save(self.modelPath, save_format="hdf5", save_traces = True)
 
         except:
             logging.error('Training of the ' + self.layerName + '-' + self.modelName + ' model failed...')
@@ -222,82 +125,71 @@ class ModelTrainAndEval():
             
             
     ## Get the encoded and decoded data from selected model and dataset
-    def dataEncodeDecode(self, actStr):
+    def dataEncodeDecode(self):
 
         processedData = {}
-
-        try:
-            # Set the train or test data
-            if actStr == 'Train':
-                dataset = self.dsTrain
-                datasetL = self.dsTrainL
-            else:
-                dataset = self.dsTest
-                datasetL = self.dsTestL
-            
-            # Get the encoded data
-            encoder = keras.models.Model(inputs = self.model.input, outputs = self.model.get_layer('enc').output)
-            
-            if self.typeAE == 'VAE1' or self.typeAE == 'VAE2':
-                z_mean, z_log_var, _ = encoder.predict(dataset)
-                enc_out = np.dstack((z_mean, z_log_var))
-            elif self.typeAE == 'VQVAE1':
-                quantizer = self.model.get_layer("vector_quantizer")
-                encoded_outputs = encoder.predict(dataset)
-                
-                flat_enc_outputs = encoded_outputs.reshape(-1, encoded_outputs.shape[-1])
-                codebook_indices = quantizer.get_code_indices(flat_enc_outputs)
-                enc_out = codebook_indices.numpy().reshape(encoded_outputs.shape[:-1])
-            else:
-                enc_out = self.NormalizeData(encoder.predict(dataset))
-
-            # Get the decoded data
-            dec_out = self.NormalizeData(self.model.predict(dataset))
-
-            # Get the original data to be saved in npz
-            orig_data = self.NormalizeData(np.concatenate([img for img, _ in datasetL], axis=0))
-
-            # TODO: presunout k error mtr
-            filterStrength = 0.5
-            orig_data = np.array([(filterStrength*img + (1 - filterStrength)*cv.GaussianBlur(img, (25,25), 0)) for img in orig_data])
-
-            # Get the difference images (org - dec)
-            diff_data = np.subtract(orig_data, dec_out)
-
-            # Get labels and transform them to format to -1: NOK and 1:OK
-            labels = np.concatenate([labels for _, labels in datasetL], axis=0)
-            nokIdx = np.where(labels == 0)
-            labels[nokIdx] = -1
-
-            processedData = {'Org': orig_data, 'Enc': enc_out, 'Dec': dec_out, 'Dif': diff_data, 'Lab': labels}
-            
-            # Save the obtained data to NPZ and MAT
-            outputPath = os.path.join(self.modelPath, 'modelData', 'Eval_' + actStr)
-            np.savez_compressed(outputPath, orgData = orig_data, encData = enc_out, decData = dec_out, difData = diff_data, labels = labels)
-
-            # Visualise the obtained data
-            self.visualiseEncDecResults(actStr, processedData)
-            
-            # Get the Pearson correlation coeff.
-            if actStr == 'Test':
-                self.getPearsonCoeff(orig_data, dec_out, labels)
         
-        except:
-            logging.error('Data encode and decode for the model ' + self.layerName + '-' + self.modelName + ' failed...')
-            traceback.print_exc()
-            return
+        actStrs = ['Train', 'Test']
+        dataGens = [self.dataGenerator.dsTrain, self.dataGenerator.dsTest]
+        
+        for actStr, dataGen in zip(actStrs, dataGens):
+
+            try:
+                # Get the encoded data
+                encoder = keras.models.Model(inputs = self.model.input, outputs = self.model.get_layer('enc').output)
+
+                if self.typeAE == 'VAE1' or self.typeAE == 'VAE2':
+                    z_mean, z_log_var, _ = encoder.predict(dataGen)
+                    enc_out = np.dstack((z_mean, z_log_var))
+                elif self.typeAE == 'VQVAE1':
+                    quantizer = self.model.get_layer("vector_quantizer")
+                    encoded_outputs = encoder.predict(dataGen)
+
+                    flat_enc_outputs = encoded_outputs.reshape(-1, encoded_outputs.shape[-1])
+                    codebook_indices = quantizer.get_code_indices(flat_enc_outputs)
+                    enc_out = codebook_indices.numpy().reshape(encoded_outputs.shape[:-1])
+                else:
+                    enc_out = encoder.predict(dataGen)
+
+                # Get the decoded data
+                dec_out = self.model.predict(dataGen)
+                
+                # Save the data for visualisation
+                processedData = {'Enc': enc_out, 'Dec': dec_out}
+
+                # Save the obtained data to NPZ
+                outputPath = os.path.join(self.modelPath, 'modelData', 'Eval_' + actStr)
+                np.savez_compressed(outputPath, encData = enc_out, decData = dec_out)
+
+                # Visualise the obtained data
+                self.visualiseEncDecResults(actStr, processedData)
+
+                # Get the Pearson correlation coeff.
+                if actStr == 'Test':
+                    self.getSimilarityCoeff(dec_out)
+
+            except:
+                logging.error('Data encode and decode for the model ' + self.layerName + '-' + self.modelName + ' failed...')
+                traceback.print_exc()
+                return
 
         else:
             logging.info('Data encode and decode for the model ' + self.layerName + '-' + self.modelName + ' was succesful...')
             
             
-    ## Get Pearson correlation coefficient
-    def getPearsonCoeff(self, orgData, decData, labels):
+    ## Get Pearson correlation coefficient and SSIM metric
+    def getSimilarityCoeff(self, decData):
         
         classIDs = [-1, 1]
         classLab = ['NOK', 'OK']
         
         pAvg = []
+        ssimAvg = []
+        
+        # Get the original data
+        tempData = self.dataGenerator.processedData.get('Test')
+        orgData = tempData.get('Org')
+        labels = tempData.get('Lab')
         
         for classID, classLb in zip(classIDs, classLab):
             # Get IDs and data
@@ -307,6 +199,7 @@ class ModelTrainAndEval():
             decDataSel = decData[idx[0], :, :, :]
             
             pVal = []
+            ssimVal = []
             
             # Loop through the test images
             for imgOrg, imgDec in zip(orgDataSel, decDataSel):
@@ -315,26 +208,41 @@ class ModelTrainAndEval():
                 h = imgOrg.shape[0]
                 w = imgOrg.shape[1]
                 
+                # Compute the SSIM metric
+                ssimVal.append(SSIM(imgOrg, imgDec, data_range = 1, channel_axis = 2))
+                
+                # Convert the images to grayscale for the correlation computation
                 imgOrg = cv.resize(cv.cvtColor(imgOrg, cv.COLOR_BGR2GRAY), (int(h/8), int(w/8)))
                 imgDec = cv.resize(cv.cvtColor(imgDec, cv.COLOR_BGR2GRAY), (int(h/8), int(w/8)))
                 
                 # Compute Pearson Coefficient
                 res = stats.pearsonr(imgOrg.flatten(), imgDec.flatten())
-                pVal.append(res.pvalue)
-                
+                pVal.append(res.statistic)
+            
+            # Compute average SSIM
+            ssimVal = np.average(np.array(ssimVal))
+            ssimAvg.append(ssimVal)
+            
             # Compute average p-value
             pVal = np.average(np.array(pVal))
             pAvg.append(pVal)
             
             logging.info('Average Pearson Coefficient: ' + f'{float(pVal):.2f}' + ' for class ' + classLb)
+            logging.info('Average SSIM value: ' + f'{float(ssimVal):.2f}' + ' for class ' + classLb)
         
-        # Compute the ratio between the Pearson coeffs by the OK and NOK data
+        # Compute the ratio between the Pearson coeffs and SSIM by the OK and NOK data
         if pAvg[1] == 0:
             pRatio = 0
         else:
             pRatio = pAvg[0]/pAvg[1]
+            
+        if ssimAvg[1] == 0:
+            ssimRatio = 0
+        else:
+            ssimRatio = ssimAvg[0]/ssimAvg[1]
 
         logging.info('Pearson Coefficient ratio: ' + f'{float(pRatio):.2f}' + ' for model ' + self.layerName + '-' + self.modelName)
+        logging.info('SSIM ratio: ' + f'{float(ssimRatio):.2f}' + ' for model ' + self.layerName + '-' + self.modelName)
             
     
     ## Visualise the results
@@ -385,11 +293,17 @@ class ModelTrainAndEval():
                 label = ' during training.'
             else:
                 label = ' during testing.'
-
-            orig_data = processedData.get('Org')
+                
+            # Get the original data
+            tempData = self.dataGenerator.processedData.get(actStr)
+            orig_data = tempData.get('Org')
+            
+            # Get the decoded data
             enc_out = processedData.get('Enc')
             dec_out = processedData.get('Dec')
-            diff_data = processedData.get('Dif')
+            
+            # Compute the difference images (org - dec)
+            diff_data = np.subtract(orig_data, dec_out)
 
             # Plot the encoded samples from all classes
             fig, axarr = plt.subplots(4,4)
