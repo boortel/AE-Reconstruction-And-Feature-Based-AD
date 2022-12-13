@@ -27,22 +27,49 @@ from sklearn.metrics import precision_recall_curve, auc, roc_auc_score, roc_curv
 class ModelClassificationBase():
 
     ## Set the constants and paths
-    def __init__(self, modelDataPath, modelSel, layerSel, labelInfo, imageDim):
+    def __init__(self, modelDataPath, experimentPath, modelSel, layerSel, labelInfo, imageDim, featExtName):
 
         # Set the base path
         self.layerSel = layerSel
         self.modelName = modelSel
         self.modelDataPath = modelDataPath
+        self.experimentPath = experimentPath
 
         # Set the constants
         self.imageDim = imageDim
         self.labelInfo = labelInfo
-        self.featExtName = ''
+        
+        # Set the feature extractor name and print separator
+        self.featExtName = featExtName
+        
+        logging.info('Feature extraction method: ' + self.featExtName)
+        logging.info('------------------------------------------------------------------------------------------------')
 
     
     ## Get data from file
     def procDataFromFile(self, actStr):
-        pass
+        
+        self.actStr = actStr
+
+        # Build the paths
+        orgDatasetPath = os.path.join(self.experimentPath, 'Org_' + actStr + '.npz')
+        procDatasetPath = os.path.join(self.modelDataPath, 'Eval_' + actStr + '.npz')
+
+        # Load the NPZ files
+        orgDataset = np.load(orgDatasetPath)
+        procDataset = np.load(procDatasetPath)
+
+        if self.actStr == 'Train':
+
+            # Store the data and get the metrics
+            self.processedDataTr = {'Org': orgDataset['orgData'], 'Dec': procDataset['decData'], 'Lab': orgDataset['labels']}
+            self.metricsTr, _ = self.computeMetrics(self.processedDataTr)
+
+        elif self.actStr == 'Test':
+            
+            # Store the data and get the metrics
+            self.processedDataTs = {'Org': orgDataset['orgData'], 'Dec': procDataset['decData'], 'Lab': orgDataset['labels']}
+            self.metricsTs, self.labelsTs = self.computeMetrics(self.processedDataTs)
 
 
     ## Compute the classification metrics
@@ -81,25 +108,42 @@ class ModelClassificationBase():
     ## Calculate classification metrics
     def getEvaluationMetrics(self, scores, name, ax):
 
-        #precision, recall, _ = precision_recall_curve(testy, scores)
-        #prc_auc = auc(recall, precision)
+        precision, recall, _ = precision_recall_curve(self.labelsTs, scores)
+        prc_auc = auc(recall, precision)
 
         roc_auc = roc_auc_score(self.labelsTs, scores)
         fpr, tpr, _ = roc_curve(self.labelsTs, scores)
         
         logging.info("Algorithm: " + name)
-        logging.info("AUC: " + f'{float(roc_auc):.2f}')
+        logging.info("AUC-ROC: " + f'{float(roc_auc):.2f}')
+        logging.info("AUC-PRE: " + f'{float(prc_auc):.2f}')
 
         ax.plot(fpr, tpr)
         ax.set_title(name + ', AUC: ' + f'{float(roc_auc):.2f}')
         ax.set(xlabel = "False positive rate", ylabel = "True positive rate")
     
 
-    ## Get the OK and NOK counts
+    ## Get the OK and NOK counts together with TPR and TNR
     def getConfusionMatrix(self, labelsPred, name, ax):
 
         cm = confusion_matrix(self.labelsTs, labelsPred)
         
+        # Get the TPR and TNR
+        tnr = cm[0, 0]/(cm[0, 0] + cm[0, 1])
+        tpr = cm[1, 1]/(cm[1, 0] + cm[1, 1])
+        
+        logging.info("TPR: " + f'{float(tnr):.2f}')
+        logging.info("TNR: " + f'{float(tpr):.2f}')
+        
+        # Get the balance ratio
+        tnc = 1 if cm[0, 0] == 0 else cm[0, 0]
+        tpc = 1 if cm[1, 1] == 0 else cm[1, 1]
+        
+        bRatio = tnc/tpc if tnc <= tpc else -tpc/tnc
+        
+        logging.info("Balance ratio: " + f'{float(bRatio):.2f}')
+        
+        # Display confusion matrix
         logging.info("Confusion matrix")
         logging.info(cm)
 

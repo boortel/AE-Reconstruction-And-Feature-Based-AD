@@ -23,13 +23,10 @@ from ModelClassificationBase import ModelClassificationBase
 class ModelClassificationSIFT(ModelClassificationBase):
 
     ## Constructor
-    def __init__(self, modelDataPath, modelSel, layerSel, labelInfo, imageDim, extractorType):
+    def __init__(self, modelDataPath, experimentPath, modelSel, layerSel, labelInfo, imageDim, extractorType):
 
         # Call the parent
-        ModelClassificationBase.__init__(self, modelDataPath, modelSel, layerSel, labelInfo, imageDim)
-
-        # Set the feature extractor name
-        self.featExtName = 'SIFTMetrics'
+        ModelClassificationBase.__init__(self, modelDataPath, experimentPath, modelSel, layerSel, labelInfo, imageDim, 'SIFTMetrics')
 
         # Set the feature extraction type
         if extractorType == 'Points' or extractorType == 'Features':
@@ -38,41 +35,6 @@ class ModelClassificationSIFT(ModelClassificationBase):
             logging.error('Unknown type of extraction ' + extractorType)
             traceback.print_exc()
             return
-
-        # Print feature extractor identifier
-        logging.info('Feature extraction method: ' + self.featExtName)
-        logging.info('-----------------------------------------------')
-
-    ## Get data from file
-    def procDataFromFile(self, actStr):
-        
-        self.actStr = actStr
-
-        # Build the path
-        procDatasetPath = os.path.join(self.modelDataPath, 'Eval_' + actStr + '.npz')
-
-        # Load the NPZ file
-        procDataset = np.load(procDatasetPath)
-
-        if self.actStr == 'Train':
-
-            # Store the data and get the metrics
-            labels = procDataset['labels']
-            okIdx = np.where(labels == 0)
-            labels[okIdx] = -1
-
-            self.processedDataTr = {'Dif': procDataset['difData'], 'Lab': labels}
-            self.metricsTr, _ = self.computeMetrics(self.processedDataTr)
-
-        elif self.actStr == 'Test':
-
-            labels = procDataset['labels']
-            okIdx = np.where(labels == 0)
-            labels[okIdx] = -1
-
-            # Store the data and get the metrics
-            self.processedDataTs = {'Dif': procDataset['difData'], 'Lab': labels}
-            self.metricsTs, self.labelsTs = self.computeMetrics(self.processedDataTs)
 
 
     ## Preprocess the images
@@ -115,7 +77,8 @@ class ModelClassificationSIFT(ModelClassificationBase):
     def computeMetrics(self, processedData):
 
         # Get the data
-        diffData = processedData.get('Dif')
+        #diffData = np.subtract(processedData.get('Org'), processedData.get('Dec'))
+        diffData = processedData.get('Dec')
         labels = processedData.get('Lab')
 
         # Initialize the metric array
@@ -136,7 +99,7 @@ class ModelClassificationSIFT(ModelClassificationBase):
 
             ## Compute the metrics from the key points
             if self.extractorType == 'Points':
-
+                
                 # Initialize the metric arrays and safety counter
                 valSizeSIFT = []
                 valRespSIFT = []
@@ -147,7 +110,7 @@ class ModelClassificationSIFT(ModelClassificationBase):
                     valSizeSIFT.append(point.size)
                     valRespSIFT.append(point.response)
                 
-                    if counter >= 4:
+                    if counter >= 5:
                         break
                     else:
                         counter += 1

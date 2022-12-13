@@ -18,16 +18,19 @@ import traceback
 import configparser
 
 from ModelTrainAndEval import ModelTrainAndEval
+from ModelDataGenerators import ModelDataGenerators
 from ModelClassificationErrM import ModelClassificationErrM
 from ModelClassificationSIFT import ModelClassificationSIFT
+from ModelClassificationHardNet1 import ModelClassificationHardNet1
+from ModelClassificationHardNet2 import ModelClassificationHardNet2
 
 
 ## Parse the arguments
 def parse_args():
     parser = argparse.ArgumentParser(description = 'Train and evaluate models defined in the ini files of the init directory')
     
-    parser.add_argument('--modelTrain', default = True, type = bool, help = 'Set True for model training')
-    parser.add_argument('--modelEval', default = True, type = bool, help = 'Set True for model evaluation')
+    parser.add_argument('--modelTrain', default = False, type = bool, help = 'Set True for model training')
+    parser.add_argument('--modelEval', default = False, type = bool, help = 'Set True for model evaluation')
 
     args = parser.parse_args()
 
@@ -66,8 +69,8 @@ def main():
             cfg.read(os.path.join('init', filename))
 
             # General
+            experimentPath = cfg.get('General', 'modelBasePath', fallback = 'NaN')
             labelInfo = cfg.get('General', 'labelInfo', fallback = 'NaN')
-            modelBasePath = cfg.get('General', 'modelBasePath', fallback = 'NaN')
             imageDim = (cfg.getint('General', 'imHeight', fallback = '0'), 
                         cfg.getint('General', 'imWidth', fallback = '0'),
                         cfg.getint('General', 'imChannel', fallback = '0'))
@@ -90,6 +93,9 @@ def main():
             logging.info('                                                                                                ')
             logging.info('------------------------------------------------------------------------------------------------')
             
+            # Create the experiment related data generator object
+            dataGenerator = ModelDataGenerators(experimentPath, datasetPath, labelInfo, imageDim, batchSize)     
+            
             # Loop through the selected convolutional layers
             for layer in layerSel:
 
@@ -97,7 +103,7 @@ def main():
                 for model in modelSel:
                     
                     # Set the model path
-                    modelPath = os.path.join(modelBasePath, layer + '_' + labelInfo, model)
+                    modelPath = os.path.join(experimentPath, layer + '_' + labelInfo, model)
 
                     # Create the model data directory
                     modelDataPath = os.path.join(modelPath, 'modelData')
@@ -109,18 +115,25 @@ def main():
 
                         # Train and evaluate the model
                         try:
-                            ModelTrainAndEval(modelPath, datasetPath, model, layer, labelInfo, imageDim, batchSize, numEpoch, modelTrain, modelEval)
+                            ModelTrainAndEval(modelPath, model, layer, dataGenerator, labelInfo, imageDim, numEpoch, modelTrain, modelEval)
                         except:
                             logging.error('An error occured during the training or evaluation of ' + modelSel + ' model...')
                             traceback.print_exc()
                         else:
                             logging.info('Model ' + model + ' was trained succesfuly...')
 
-                    if True:
+                    if False:
                         
                         # Classify the model results 
+                        mClass = ModelClassificationErrM(modelDataPath, experimentPath, model, layer, labelInfo, imageDim)
+
+                        mClass.procDataFromFile('Train')
+                        mClass.procDataFromFile('Test')
+
+                        mClass.dataClassify()
+                        
                         try:
-                            mClass = ModelClassificationErrM(modelDataPath, model, layer, labelInfo, imageDim)
+                            mClass = ModelClassificationSIFT(modelDataPath, experimentPath, model, layer, labelInfo, imageDim, 'Points')
 
                             mClass.procDataFromFile('Train')
                             mClass.procDataFromFile('Test')
@@ -129,15 +142,12 @@ def main():
                         except:
                             pass
                         
-                        try:
-                            mClass = ModelClassificationSIFT(modelDataPath, model, layer, labelInfo, imageDim, 'Points')
+                    mClass = ModelClassificationHardNet2(modelDataPath, experimentPath, model, layer, labelInfo, imageDim)
 
-                            mClass.procDataFromFile('Train')
-                            mClass.procDataFromFile('Test')
+                    mClass.procDataFromFile('Train')
+                    mClass.procDataFromFile('Test')
 
-                            mClass.dataClassify()
-                        except:
-                            pass
+                    mClass.dataClassify()
 
 if __name__ == '__main__':
     main()
