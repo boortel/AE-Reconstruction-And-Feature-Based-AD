@@ -11,6 +11,7 @@ This class is used for the classification of the evaluated model
 import os
 import time
 import logging
+import traceback
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -27,7 +28,7 @@ from sklearn.metrics import precision_recall_curve, auc, roc_auc_score, roc_curv
 class ModelClassificationBase():
 
     ## Set the constants and paths
-    def __init__(self, modelDataPath, experimentPath, modelSel, layerSel, labelInfo, imageDim, featExtName):
+    def __init__(self, modelDataPath, experimentPath, modelSel, layerSel, labelInfo, imageDim, modelData, featExtName):
 
         # Set the base path
         self.layerSel = layerSel
@@ -42,57 +43,81 @@ class ModelClassificationBase():
         # Set the feature extractor name and print separator
         self.featExtName = featExtName
         
+        # Save the modelData variable
+        self.modelData = modelData
+        
         logging.info('Feature extraction method: ' + self.featExtName)
         logging.info('------------------------------------------------------------------------------------------------')
+        
+        # Load data, extract features and classify them
+        #try:
+            #if self.modelData:
+            #    self.procDataFromDict()
+            #else:
+            #    self.procDataFromFile()
+            #self.procDataFromFile()
+            
+        #except:
+        #    logging.error('An error occured during classification using ' + self.featExtName + ' feature extraction method...')
+        #    traceback.print_exc()
+        #    pass
 
     
     ## Get data from file
-    def procDataFromFile(self, actStr):
+    def procDataFromFile(self):
         
-        self.actStr = actStr
+        actStrs = ['Train', 'Test']
+        
+        for actStr in actStrs:
 
-        # Build the paths
-        orgDatasetPath = os.path.join(self.experimentPath, 'Org_' + actStr + '.npz')
-        procDatasetPath = os.path.join(self.modelDataPath, 'Eval_' + actStr + '.npz')
+            self.actStr = actStr
 
-        # Load the NPZ files
-        orgDataset = np.load(orgDatasetPath)
-        procDataset = np.load(procDatasetPath)
+            # Build the paths
+            orgDatasetPath = os.path.join(self.experimentPath, 'Org_' + actStr + '.npz')
+            procDatasetPath = os.path.join(self.modelDataPath, 'Eval_' + actStr + '.npz')
 
-        if self.actStr == 'Train':
+            # Load the NPZ files
+            orgDataset = np.load(orgDatasetPath)
+            procDataset = np.load(procDatasetPath)
 
-            # Store the data and get the metrics
-            self.processedDataTr = {'Org': orgDataset['orgData'], 'Dec': procDataset['decData'], 'Lab': orgDataset['labels']}
-            self.metricsTr, _ = self.computeMetrics(self.processedDataTr)
+            if self.actStr == 'Train':
 
-        elif self.actStr == 'Test':
-            
-            # Store the data and get the metrics
-            self.processedDataTs = {'Org': orgDataset['orgData'], 'Dec': procDataset['decData'], 'Lab': orgDataset['labels']}
-            self.metricsTs, self.labelsTs = self.computeMetrics(self.processedDataTs)
+                # Store the data and get the metrics
+                self.processedData = {'Org': orgDataset['orgData'], 'Dec': procDataset['decData'], 'Lab': orgDataset['labels']}
+                self.metricsTr, _ = self.computeMetrics(self.processedData)
 
+            elif self.actStr == 'Test':
 
-    ## Compute the classification metrics
-    def computeMetrics(self, processedData):
-        pass
+                # Store the data and get the metrics
+                self.processedData = {'Org': orgDataset['orgData'], 'Dec': procDataset['decData'], 'Lab': orgDataset['labels']}
+                self.metricsTs, self.labelsTs = self.computeMetrics(self.processedData)
     
 
     ## Get data from dictionary
-    def procDataFromDict(self, processedData, actStr):
-
-        self.actStr = actStr
-
-        if self.actStr == 'Train':
+    def procDataFromDict(self):
         
-            # Store data and get the metrics
-            self.processedDataTr = processedData
-            self.metricsTr, self.labelsTr = self.computeMetrics(self.processedDataTr)
+        actStrs = ['Train', 'Test']
+        
+        for actStr in actStrs:
+            
+            self.actStr = actStr
 
-        elif self.actStr == 'Test':
+            if self.actStr == 'Train':
 
-            # Store data and get the metrics
-            self.processedDataTs = processedData
-            self.metricsTs, self.labelsTs = self.computeMetrics(self.processedDataTs)
+                # Store the data and get the metrics
+                self.processedData = {'Org': self.modelData[actStr]['Org'], 'Dec': self.modelData[actStr]['Dec'], 'Lab': self.modelData[actStr]['Lab']}
+                self.metricsTr, _ = self.computeMetrics(self.processedData)
+
+            elif self.actStr == 'Test':
+
+                # Store the data and get the metrics
+                self.processedData = {'Org': self.modelData[actStr]['Org'], 'Dec': self.modelData[actStr]['Dec'], 'Lab': self.modelData[actStr]['Lab']}
+                self.metricsTs, self.labelsTs = self.computeMetrics(self.processedData)
+            
+            
+    ## Compute the classification metrics
+    def computeMetrics(self, processedData):
+        pass
 
 
     ## Normalize data (Gaussian)
@@ -200,7 +225,7 @@ class ModelClassificationBase():
     def fsVisualise(self, metrics, labels):
 
         # Reduce the dimensionality of metrics for t-SNE transformation
-        if metrics.shape[1] > 50:
+        if metrics.shape[0] > 50 and metrics.shape[1] > 50:
             pca_red = PCA(n_components = 50)
             metrics = pca_red.fit_transform(metrics)
 
