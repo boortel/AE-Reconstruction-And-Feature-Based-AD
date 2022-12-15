@@ -23,6 +23,8 @@ from ModelClassificationErrM import ModelClassificationErrM
 from ModelClassificationSIFT import ModelClassificationSIFT
 from ModelClassificationHardNet1 import ModelClassificationHardNet1
 from ModelClassificationHardNet2 import ModelClassificationHardNet2
+from ModelClassificationHardNet3 import ModelClassificationHardNet3
+from ModelClassificationHardNet4 import ModelClassificationHardNet4
 
 
 ## Parse the arguments
@@ -93,6 +95,10 @@ def main():
             logging.info('                                                                                                ')
             logging.info('------------------------------------------------------------------------------------------------')
             
+            # Create experiment directory
+            if not os.path.exists(experimentPath):
+                os.makedirs(experimentPath)
+            
             # Create the experiment related data generator object
             dataGenerator = ModelDataGenerators(experimentPath, datasetPath, labelInfo, imageDim, batchSize)     
             
@@ -107,6 +113,9 @@ def main():
 
                     # Create the model data directory
                     modelDataPath = os.path.join(modelPath, 'modelData')
+                    
+                    # Create variable to store model data
+                    modelData = []
 
                     if not os.path.exists(modelDataPath):
                         os.makedirs(modelDataPath)
@@ -115,39 +124,30 @@ def main():
 
                         # Train and evaluate the model
                         try:
-                            ModelTrainAndEval(modelPath, model, layer, dataGenerator, labelInfo, imageDim, numEpoch, modelTrain, modelEval)
+                            modelObj = ModelTrainAndEval(modelPath, model, layer, dataGenerator, labelInfo, imageDim, numEpoch, modelTrain, modelEval)
+                            
+                            modelData = modelObj.returnProcessedData()
                         except:
                             logging.error('An error occured during the training or evaluation of ' + modelSel + ' model...')
                             traceback.print_exc()
                         else:
                             logging.info('Model ' + model + ' was trained succesfuly...')
 
-                    if False:
+                    if True:
                         
                         # Classify the model results 
-                        mClass = ModelClassificationErrM(modelDataPath, experimentPath, model, layer, labelInfo, imageDim)
-
-                        mClass.procDataFromFile('Train')
-                        mClass.procDataFromFile('Test')
-
-                        mClass.dataClassify()
+                        ModelClassificationErrM(modelDataPath, experimentPath, model, layer, labelInfo, imageDim, modelData)
                         
-                        try:
-                            mClass = ModelClassificationSIFT(modelDataPath, experimentPath, model, layer, labelInfo, imageDim, 'Points')
-
-                            mClass.procDataFromFile('Train')
-                            mClass.procDataFromFile('Test')
-
-                            mClass.dataClassify()
-                        except:
-                            pass
+                        ModelClassificationSIFT(modelDataPath, experimentPath, model, layer, labelInfo, imageDim, modelData, 'Points')
                         
-                    mClass = ModelClassificationHardNet2(modelDataPath, experimentPath, model, layer, labelInfo, imageDim)
-
-                    mClass.procDataFromFile('Train')
-                    mClass.procDataFromFile('Test')
-
-                    mClass.dataClassify()
+                        #ModelClassificationHardNet1(modelDataPath, experimentPath, model, layer, labelInfo, imageDim, modelData)
+                        
+                        ModelClassificationHardNet2(modelDataPath, experimentPath, model, layer, labelInfo, imageDim, modelData)
+                        
+                        ModelClassificationHardNet3(modelDataPath, experimentPath, model, layer, labelInfo, imageDim, modelData)
+                        
+                        ModelClassificationHardNet4(modelDataPath, experimentPath, model, layer, labelInfo, imageDim, modelData)
+                        
 
 if __name__ == '__main__':
     main()

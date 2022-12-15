@@ -29,16 +29,25 @@ from ModelClassificationBase import ModelClassificationBase
 class ModelClassificationHardNet1(ModelClassificationBase):
 
     ## Constructor
-    def __init__(self, modelDataPath, experimentPath, modelSel, layerSel, labelInfo, imageDim):
+    def __init__(self, modelDataPath, experimentPath, modelSel, layerSel, labelInfo, imageDim, modelData):
         
         # Disable tf2 behavior for tf1
         #tf1.disable_v2_behavior()
 
         # Call the parent
-        ModelClassificationBase.__init__(self, modelDataPath, experimentPath, modelSel, layerSel, labelInfo, imageDim, 'HardNet1')
+        ModelClassificationBase.__init__(self, modelDataPath, experimentPath, modelSel, layerSel, labelInfo, imageDim, modelData, 'HardNet1')
         
         # Create HardNet model object
         self.hardNet = HardNet()
+        
+        # Get data, metrics and classify the data
+        try:
+            self.procDataFromFile()
+            self.dataClassify()
+        except:
+            logging.error('An error occured during classification using ' + self.featExtName + ' feature extraction method...')
+            traceback.print_exc()
+        pass
         
 
     ## Compute the classification metrics
@@ -62,11 +71,9 @@ class ModelClassificationHardNet1(ModelClassificationBase):
         # Generate batches
         batches = gen_batches(gsData.shape[0], 20)
         
-        # Get HardNet features
-        with tf1.Session() as sess:
-            
-            for batch in batches:
-                metrics.append(sess.run(self.hardNet.forward(gsData[batch])))
+        # Get HardNet features  
+        for batch in batches:
+            metrics.append(self.hardNet.forward(gsData[batch]))
         
         metrics = np.array(metrics)
         metrics = metrics.reshape(metrics.shape[0] * metrics.shape[1], metrics.shape[2])

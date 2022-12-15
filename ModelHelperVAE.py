@@ -14,10 +14,11 @@ Please refer to following examples:
 """
 
 import keras
+import numpy as np
 import tensorflow as tf
 
 from keras.models import Model
-from keras.layers import Layer
+from keras.layers import Layer, Conv2D
 
 ## Class to define and train VAEs models
 class VAE(Model):
@@ -196,3 +197,4 @@ class VQVAETrainer(Model):
             "reconstruction_loss": self.reconstruction_loss_tracker.result(),
             "vqvae_loss": self.vq_loss_tracker.result(),
         }
+    

@@ -16,14 +16,17 @@ import keras.models
 import cv2 as cv
 import numpy as np
 import tensorflow as tf
+import tensorflow_probability as tfp
+
 import matplotlib.pyplot as plt
 
 from scipy import stats
-from keras import callbacks
+from keras import callbacks, layers, Model
 from scipy.io import savemat
 from functools import partial
-from ModelSaved import ModelSaved
 from skimage.metrics import structural_similarity as SSIM
+
+from ModelSaved import ModelSaved
 
 AUTOTUNE = tf.data.experimental.AUTOTUNE
 
@@ -83,7 +86,7 @@ class ModelTrainAndEval():
             # Configure the early stopping callback
             self.esCallBack = callbacks.EarlyStopping(
                 monitor = 'loss', 
-                patience = 5)
+                patience = 10)
 
         except:
             logging.error('Callback initialization of the ' + self.layerName + '-' + self.modelName + ' model failed...')
@@ -144,6 +147,8 @@ class ModelTrainAndEval():
                 elif self.typeAE == 'VQVAE1':
                     quantizer = self.model.get_layer("vector_quantizer")
                     encoded_outputs = encoder.predict(dataGen)
+                    
+                    pixelcnn_input_shape = encoded_outputs.shape[1:-1]
 
                     flat_enc_outputs = encoded_outputs.reshape(-1, encoded_outputs.shape[-1])
                     codebook_indices = quantizer.get_code_indices(flat_enc_outputs)
@@ -155,14 +160,15 @@ class ModelTrainAndEval():
                 dec_out = self.model.predict(dataGen)
                 
                 # Save the data for visualisation
-                processedData = {'Enc': enc_out, 'Dec': dec_out}
+                self.dataGenerator.processedData[actStr]['Enc'] = enc_out
+                self.dataGenerator.processedData[actStr]['Dec'] = dec_out
 
                 # Save the obtained data to NPZ
                 outputPath = os.path.join(self.modelPath, 'modelData', 'Eval_' + actStr)
                 np.savez_compressed(outputPath, encData = enc_out, decData = dec_out)
 
                 # Visualise the obtained data
-                self.visualiseEncDecResults(actStr, processedData)
+                self.visualiseEncDecResults(actStr)
 
                 # Get the Pearson correlation coeff.
                 if actStr == 'Test':
@@ -243,6 +249,11 @@ class ModelTrainAndEval():
 
         logging.info('Pearson Coefficient ratio: ' + f'{float(pRatio):.2f}' + ' for model ' + self.layerName + '-' + self.modelName)
         logging.info('SSIM ratio: ' + f'{float(ssimRatio):.2f}' + ' for model ' + self.layerName + '-' + self.modelName)
+        
+    
+    ## Return original, encoded and decoded data with labels
+    def returnProcessedData(self):
+        return self.dataGenerator.processedData
             
     
     ## Visualise the results
@@ -284,32 +295,31 @@ class ModelTrainAndEval():
             
             
     ## Visualise the results
-    def visualiseEncDecResults(self, actStr, processedData):
+    def visualiseEncDecResults(self, actStr):
 
         # TODO: pridat parametr, ktery urci vykreslovane vzorky
         try:
             # Set the train or test data
             if actStr == 'Train':
-                label = ' during training.'
+                label = 'during training'
             else:
-                label = ' during testing.'
+                label = 'during testing'
                 
-            # Get the original data
+            # Get the original, encoded and decoded data
             tempData = self.dataGenerator.processedData.get(actStr)
-            orig_data = tempData.get('Org')
             
-            # Get the decoded data
-            enc_out = processedData.get('Enc')
-            dec_out = processedData.get('Dec')
+            orig_data = tempData.get('Org')
+            enc_out = tempData.get('Enc')
+            dec_out = tempData.get('Dec')
             
             # Compute the difference images (org - dec)
             diff_data = np.subtract(orig_data, dec_out)
 
             # Plot the encoded samples from all classes
             fig, axarr = plt.subplots(4,4)
-            tempTitle = ' Original, encoded and decoded images of the ' + self.layerName + '-' + self.modelName + '_' + self.labelInfo + ' autoencoder model, ' + label + '.'
+            tempTitle = 'Results of the ' + self.layerName + '-' + self.modelName + ' autoencoder model ' + label + ' and ' + self.labelInfo + ' experiment.'
             
-            fig.suptitle(tempTitle, fontsize=14, y=1.08)
+            fig.suptitle(tempTitle, fontsize=16)
             fig.set_size_inches(16, 16)
 
             # Cookie: 27, 35, 205
@@ -335,9 +345,18 @@ class ModelTrainAndEval():
                 axarr[2,1].set(xlabel = "Mean", ylabel = "Variance")
                 axarr[3,1].scatter(enc_out[35, :, 0], enc_out[35, :, 1], s = 4)
                 axarr[3,1].set(xlabel = "Mean", ylabel = "Variance")
+                
             elif self.typeAE == 'BAE1' or self.typeAE == 'BAE2':
-                pass
-            else:
+                axarr[0,1].imshow(cv.normalize(enc_out[0].mean(axis=2), None, 0, 255, cv.NORM_MINMAX, cv.CV_8U))
+                axarr[0,1].axis('off')
+                axarr[1,1].imshow(cv.normalize(enc_out[10].mean(axis=2), None, 0, 255, cv.NORM_MINMAX, cv.CV_8U))
+                axarr[1,1].axis('off')
+                axarr[2,1].imshow(cv.normalize(enc_out[25].mean(axis=2), None, 0, 255, cv.NORM_MINMAX, cv.CV_8U))
+                axarr[2,1].axis('off')
+                axarr[3,1].imshow(cv.normalize(enc_out[35].mean(axis=2), None, 0, 255, cv.NORM_MINMAX, cv.CV_8U))
+                axarr[3,1].axis('off')
+                
+            elif self.typeAE == 'VQVAE1':
                 axarr[0,1].imshow(cv.normalize(enc_out[0], None, 0, 255, cv.NORM_MINMAX, cv.CV_8U))
                 axarr[0,1].axis('off')
                 axarr[1,1].imshow(cv.normalize(enc_out[10], None, 0, 255, cv.NORM_MINMAX, cv.CV_8U))
@@ -346,6 +365,9 @@ class ModelTrainAndEval():
                 axarr[2,1].axis('off')
                 axarr[3,1].imshow(cv.normalize(enc_out[35], None, 0, 255, cv.NORM_MINMAX, cv.CV_8U))
                 axarr[3,1].axis('off')
+                
+            else:
+                pass
 
             axarr[0,2].set_title("Decoded")
             axarr[0,2].imshow(cv.normalize(dec_out[0], None, 0, 255, cv.NORM_MINMAX, cv.CV_8U))

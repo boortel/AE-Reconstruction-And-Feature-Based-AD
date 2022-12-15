@@ -23,10 +23,19 @@ from ModelClassificationBase import ModelClassificationBase
 class ModelClassificationErrM(ModelClassificationBase):
 
     ## Constructor
-    def __init__(self, modelDataPath, experimentPath, modelSel, layerSel, labelInfo, imageDim):
+    def __init__(self, modelDataPath, experimentPath, modelSel, layerSel, labelInfo, imageDim, modelData):
 
         # Call the parent
-        ModelClassificationBase.__init__(self, modelDataPath, experimentPath, modelSel, layerSel, labelInfo, imageDim, 'ErrMetrics')
+        ModelClassificationBase.__init__(self, modelDataPath, experimentPath, modelSel, layerSel, labelInfo, imageDim, modelData, 'ErrMetrics')
+        
+        # Get data, metrics and classify the data
+        try:
+            self.procDataFromFile()
+            self.dataClassify()
+        except:
+            logging.error('An error occured during classification using ' + self.featExtName + ' feature extraction method...')
+            traceback.print_exc()
+        pass
 
 
     ## Compute the classification metrics

@@ -160,6 +160,26 @@ class ModelLayers():
             redEncWidth = np.int32(self.imWidth / 8)
             filterCount = np.int32(4)
             
+        # Asymetric encoder and decoder (ConvM5 vs ConvM4)
+        elif self.layerSel == 'ConvM6':
+            
+            netEnc = Conv2D(16, (3, 3), activation='relu', padding='same', name='conv_E1')(input_img)
+            netEnc = MaxPooling2D((2, 2), padding='same', name='mpool_E1')(netEnc)
+            netEnc = BatchNormalization(name='bn_E1')(netEnc)
+            
+            netEnc = Conv2D(8, (3, 3), activation='relu', padding='same', name='conv_E2')(netEnc)
+            netEnc = MaxPooling2D((2, 2), padding='same', name='mpool_E2')(netEnc)
+            netEnc = BatchNormalization(name='bn_E2')(netEnc)
+            
+            netEnc = Conv2D(4, (3, 3), activation='relu', padding='same', name='conv_E3')(netEnc)
+            netEnc = MaxPooling2D((2, 2), padding='same', name='out_E')(netEnc)
+            netEnc = BatchNormalization(name='bn_E3')(netEnc)
+            
+            ## Encoding reduction parameters
+            redEncHeight = np.int32(self.imHeight / 8)
+            redEncWidth = np.int32(self.imWidth / 8)
+            filterCount = np.int32(4)
+            
             
         # TODO: Define and add other models in the same way
 
@@ -272,6 +292,20 @@ class ModelLayers():
             netDec = BatchNormalization(name='bn_D3')(netDec)
             
             output_img = Conv2D(self.imChannel, (3, 3), activation='sigmoid', padding='same', name='conv_D4')(netDec)
+            
+            
+        # Asymetric encoder and decoder (ConvM5 vs ConvM4)
+        elif self.layerSel == 'ConvM6':
+            
+            netDec = Conv2D(filterCount, (3, 3), activation='relu', padding='same', name='conv_D1')(inputNet)
+            netDec = UpSampling2D((4, 4), name='upsmp_D1')(netDec)
+            netDec = BatchNormalization(name='bn_D1')(netDec)
+            
+            netDec = Conv2D(8, (5, 5), activation='relu', padding='same', name='conv_D2')(netDec)
+            netDec = UpSampling2D((2, 2), name='upsmp_D2')(netDec)
+            netDec = BatchNormalization(name='bn_D2')(netDec)
+            
+            output_img = Conv2D(self.imChannel, (3, 3), activation='sigmoid', padding='same', name='conv_D3')(netDec)
         
         
         # TODO: Define and add other models in the same way

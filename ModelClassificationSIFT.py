@@ -23,10 +23,10 @@ from ModelClassificationBase import ModelClassificationBase
 class ModelClassificationSIFT(ModelClassificationBase):
 
     ## Constructor
-    def __init__(self, modelDataPath, experimentPath, modelSel, layerSel, labelInfo, imageDim, extractorType):
+    def __init__(self, modelDataPath, experimentPath, modelSel, layerSel, labelInfo, imageDim, modelData, extractorType):
 
         # Call the parent
-        ModelClassificationBase.__init__(self, modelDataPath, experimentPath, modelSel, layerSel, labelInfo, imageDim, 'SIFTMetrics')
+        ModelClassificationBase.__init__(self, modelDataPath, experimentPath, modelSel, layerSel, labelInfo, imageDim, modelData, 'SIFTMetrics')
 
         # Set the feature extraction type
         if extractorType == 'Points' or extractorType == 'Features':
@@ -35,6 +35,15 @@ class ModelClassificationSIFT(ModelClassificationBase):
             logging.error('Unknown type of extraction ' + extractorType)
             traceback.print_exc()
             return
+        
+        # Get data, metrics and classify the data
+        try:
+            self.procDataFromFile()
+            self.dataClassify()
+        except:
+            logging.error('An error occured during classification using ' + self.featExtName + ' feature extraction method...')
+            traceback.print_exc()
+        pass
 
 
     ## Preprocess the images

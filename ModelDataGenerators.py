@@ -10,6 +10,7 @@ This class is used to set data generators and to save the original data to the n
 
 import os
 import logging
+import cv2 as cv
 import numpy as np
 import tensorflow as tf
 
@@ -29,7 +30,7 @@ class ModelDataGenerators():
         self.getGenerators()
         
         # Save the original data to NPZ
-        #self.saveOrgData()
+        self.saveOrgData()
         
     
     ## Normalize and augment training dataset (image as label)
@@ -41,6 +42,10 @@ class ModelDataGenerators():
         # Augment the image
         x_norm = tf.image.random_flip_left_right(x_norm)
         x_norm = tf.image.random_contrast(x_norm, lower=0.0, upper=1.0)
+        
+        # Random image inversion and saturation
+        x_norm = (1-x_norm) if tf.random.uniform([]) < 0.5 else x_norm
+        x_norm = tf.image.adjust_saturation(x_norm, 3)
         
         # Add salt and pepper noise
         random_values = tf.random.uniform(shape=x_norm[0, ..., -1:].shape)
@@ -65,10 +70,6 @@ class ModelDataGenerators():
         normalization_layer = tf.keras.layers.Rescaling(1./255)
         x = tf.image.resize(normalization_layer(images),[self.imageDim[0], self.imageDim[1]], method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
         
-        # TODO: presunout k error mtr, nebo rovnou k datasetuL - neni vyuzit pro uceni
-        #filterStrength = 0.5
-        #orig_data = np.array([(filterStrength*img + (1 - filterStrength)*cv.GaussianBlur(img, (25,25), 0)) for img in orig_data])
-        
         return x, labels
     
     
@@ -81,7 +82,6 @@ class ModelDataGenerators():
             image_size = self.tSize,
             color_mode = self.cMode,
             batch_size = self.batchSize,
-            #crop_to_aspect_ratio = True,
             label_mode = 'int',
             shuffle = False)
 
@@ -90,7 +90,6 @@ class ModelDataGenerators():
             image_size = self.tSize,
             color_mode = self.cMode,
             batch_size = self.batchSize,
-            #crop_to_aspect_ratio = True,
             label_mode = 'binary',
             shuffle = False)
         
@@ -155,6 +154,10 @@ class ModelDataGenerators():
             labels = np.concatenate([labels for _, labels in dataGen], axis=0)
             nokIdx = np.where(labels == 0)
             labels[nokIdx] = -1
+            
+            # Filter the original data
+            filterStrength = 0.5
+            orig_data = np.array([(filterStrength*img + (1 - filterStrength)*cv.GaussianBlur(img, (25,25), 0)) for img in orig_data])
 
             # Save the obtained data to NPZ
             outputPath = os.path.join(self.experimentPath, 'Org_' + actStr)
