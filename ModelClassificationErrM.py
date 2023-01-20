@@ -8,9 +8,9 @@ This class is used for the classification of the evaluated model
 
 """
 
-import os
 import logging
 import imagehash
+import traceback
 
 import numpy as np
 
@@ -30,7 +30,11 @@ class ModelClassificationErrM(ModelClassificationBase):
         
         # Get data, metrics and classify the data
         try:
-            self.procDataFromFile()
+            if self.modelData:
+                self.procDataFromDict()
+            else:
+                self.procDataFromFile()
+                
             self.dataClassify()
         except:
             logging.error('An error occured during classification using ' + self.featExtName + ' feature extraction method...')
@@ -80,8 +84,5 @@ class ModelClassificationErrM(ModelClassificationBase):
 
         # Get metrics np array
         metrics = self.normalize2DData(np.column_stack((valuesL2, valuesMSE, valuesSSIM, valuesAvgH)))
-
-        # Visualise the data
-        self.fsVisualise(metrics, labels)
 
         return metrics, labels

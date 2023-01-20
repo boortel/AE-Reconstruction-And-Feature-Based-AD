@@ -8,25 +8,16 @@ This class is used for the classification of the evaluated model
 
 """
 
-import os
-import keras
-import pickle
 import logging
 import traceback
 
 import cv2 as cv
 import numpy as np
-import tensorflow as tf
-from keras.models import Model
-import tensorflow.compat.v1 as tf1
 
-from sklearn.utils import gen_batches
-from sklearn.decomposition import PCA
+from scipy import spatial
+from HardNet import HardNet
 from skimage.util import view_as_blocks
 
-from fishervector import FisherVectorGMM
-
-from HardNet import HardNet
 from ModelClassificationBase import ModelClassificationBase
 
 
@@ -43,7 +34,11 @@ class ModelClassificationHardNet3(ModelClassificationBase):
         
         # Get data, metrics and classify the data
         try:
-            self.procDataFromFile()
+            if self.modelData:
+                self.procDataFromDict()
+            else:
+                self.procDataFromFile()
+                
             self.dataClassify()
         except:
             logging.error('An error occured during classification using ' + self.featExtName + ' feature extraction method...')
@@ -61,12 +56,7 @@ class ModelClassificationHardNet3(ModelClassificationBase):
         labels = processedData.get('Lab')
         
         # Initialize the conversion and metric lists
-        gsData = []
         metrics = []
-        
-        # Get the sub-img parameters
-        hSub = self.imageDim[0]/32
-        wSub = self.imageDim[1]/32
             
         # Get HardNet features for each image
         for imgOrg, imgDec in zip(orgData, decData):
@@ -87,13 +77,18 @@ class ModelClassificationHardNet3(ModelClassificationBase):
             desDec = self.hardNet.forward(batchDec)
             
             # Match descriptors.
-            dist = np.linalg.norm(desOrg-desDec, axis=1)
-            metrics.append(dist)
+            #dist = np.linalg.norm(desOrg-desDec, axis=1)
+            #metrics.append(dist)
+            
+            dist = []
+            
+            # Match descriptors using cosine simillarity scaled between 0-1
+            for desVecOrg, desVecDec in zip(desOrg, desDec):
+                dist.append(np.abs(spatial.distance.cosine(desVecOrg, desVecDec)))
+            
+            metrics.append(np.array(dist))
 
         # Convert the metrics to np array
         metrics = np.array(metrics)
-        
-        # Visualise the data
-        self.fsVisualise(metrics, labels)
 
         return metrics, labels

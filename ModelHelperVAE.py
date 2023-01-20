@@ -14,11 +14,10 @@ Please refer to following examples:
 """
 
 import keras
-import numpy as np
 import tensorflow as tf
 
 from keras.models import Model
-from keras.layers import Layer, Conv2D
+from keras.layers import Layer
 
 ## Class to define and train VAEs models
 class VAE(Model):
@@ -49,15 +48,14 @@ class VAE(Model):
             reconstruction = self.decoder(z)
             
             # Calculate the losses.
-            reconstruction_loss = tf.reduce_mean(
-                tf.reduce_sum(
-                    keras.losses.binary_crossentropy(data[1], reconstruction), axis=(1, 2)
-                )
-            )
+            reconstruction_loss = tf.reduce_mean(tf.reduce_sum(keras.losses.binary_crossentropy(data[1], reconstruction), axis=(1, 2)))
                 
             kl_loss = -0.5 * (1 + z_log_var - tf.square(z_mean) - tf.exp(z_log_var))
             kl_loss = tf.reduce_mean(tf.reduce_sum(kl_loss, axis=1))
+            
             total_loss = reconstruction_loss + kl_loss
+            #total_loss = reconstruction_loss + 0.3*kl_loss + 0.1*(1 - tf.norm(z_mean, ord='euclidean', axis=1))**2 + 0.1*(1 - tf.norm(z_log_var, ord='euclidean', axis=1))**2
+
         
         # Backpropagation
         grads = tape.gradient(total_loss, self.trainable_weights)
@@ -177,9 +175,7 @@ class VQVAETrainer(Model):
             reconstructions = self.vqvae(data[0])
 
             # Calculate the losses
-            reconstruction_loss = (
-                tf.reduce_mean((data[1] - reconstructions) ** 2) / self.train_variance
-            )
+            reconstruction_loss = (tf.reduce_mean((data[1] - reconstructions) ** 2) / self.train_variance)
             total_loss = reconstruction_loss + sum(self.vqvae.losses)
 
         # Backpropagation

@@ -11,7 +11,6 @@ This class is used for the classification of the evaluated model
 import os
 import time
 import logging
-import traceback
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -48,25 +47,12 @@ class ModelClassificationBase():
         
         logging.info('Feature extraction method: ' + self.featExtName)
         logging.info('------------------------------------------------------------------------------------------------')
-        
-        # Load data, extract features and classify them
-        #try:
-            #if self.modelData:
-            #    self.procDataFromDict()
-            #else:
-            #    self.procDataFromFile()
-            #self.procDataFromFile()
-            
-        #except:
-        #    logging.error('An error occured during classification using ' + self.featExtName + ' feature extraction method...')
-        #    traceback.print_exc()
-        #    pass
 
     
     ## Get data from file
     def procDataFromFile(self):
         
-        actStrs = ['Train', 'Test']
+        actStrs = ['Train', 'Test', 'Valid']
         
         for actStr in actStrs:
 
@@ -96,7 +82,7 @@ class ModelClassificationBase():
     ## Get data from dictionary
     def procDataFromDict(self):
         
-        actStrs = ['Train', 'Test']
+        actStrs = ['Train', 'Test', 'Valid']
         
         for actStr in actStrs:
             
@@ -113,6 +99,15 @@ class ModelClassificationBase():
                 # Store the data and get the metrics
                 self.processedData = {'Org': self.modelData[actStr]['Org'], 'Dec': self.modelData[actStr]['Dec'], 'Lab': self.modelData[actStr]['Lab']}
                 self.metricsTs, self.labelsTs = self.computeMetrics(self.processedData)
+                
+                # Visualise the data
+                self.fsVisualise(self.metricsTs, self.labelsTs)
+                
+            elif self.actStr == 'Valid':
+
+                # Store the data and get the metrics
+                self.processedData = {'Org': self.modelData[actStr]['Org'], 'Dec': self.modelData[actStr]['Dec'], 'Lab': self.modelData[actStr]['Lab']}
+                self.metricsVl, self.labelsVl = self.computeMetrics(self.processedData)
             
             
     ## Compute the classification metrics
@@ -132,20 +127,33 @@ class ModelClassificationBase():
 
     ## Calculate classification metrics
     def getEvaluationMetrics(self, scores, name, ax):
-
+        
+        # Get the ROC curve
         precision, recall, _ = precision_recall_curve(self.labelsTs, scores)
         prc_auc = auc(recall, precision)
 
         roc_auc = roc_auc_score(self.labelsTs, scores)
-        fpr, tpr, _ = roc_curve(self.labelsTs, scores)
+        fpr, tpr, trs = roc_curve(self.labelsTs, scores)
         
+        # Log the information
         logging.info("Algorithm: " + name)
         logging.info("AUC-ROC: " + f'{float(roc_auc):.2f}')
         logging.info("AUC-PRE: " + f'{float(prc_auc):.2f}')
-
+        
+        # Plot the ROC
         ax.plot(fpr, tpr)
         ax.set_title(name + ', AUC: ' + f'{float(roc_auc):.2f}')
         ax.set(xlabel = "False positive rate", ylabel = "True positive rate")
+        
+        # Get and return optimal treshold using Youden’s J statistic
+        #optimal_idx = np.argmax(tpr - fpr)
+        #optimal_trs = trs[optimal_idx]
+        
+        # Get and return optimal treshold using equal error rate (EER)
+        fnr = 1 - tpr
+        optimal_trs = trs[np.nanargmin(np.absolute((fnr - fpr)))]
+        
+        return optimal_trs
     
 
     ## Get the OK and NOK counts together with TPR and TNR
@@ -179,10 +187,10 @@ class ModelClassificationBase():
     def dataClassify(self):
         
         # Compare AD detection algorithms
-        outliers_fraction = 0.5
+        outliers_fraction = 0.01
         anomaly_algorithms = [
             ("Robust covariance", EllipticEnvelope(contamination = outliers_fraction, support_fraction = 0.9)),
-            ("One-Class SVM", svm.OneClassSVM(nu = outliers_fraction, kernel = "rbf", gamma = 0.0000001)),
+            ("One-Class SVM", svm.OneClassSVM(nu = outliers_fraction, kernel = "rbf", gamma = 'scale')),
             ("Isolation Forest", IsolationForest(contamination = outliers_fraction, random_state = 42)),
             ("Local Outlier Factor", LocalOutlierFactor(n_neighbors = 15, contamination = outliers_fraction, novelty = True))]
         
@@ -204,13 +212,23 @@ class ModelClassificationBase():
             t1 = time.time()
 
             logging.info('Model fitting time: ' + f'{float(t1 - t0):.2f}' + 's')
-
+            
+            # Get the scores from the validation DS, calculate ROC evaluation metric and get optimal trsh
+            #valScores = algorithm.decision_function(self.metricsVl)#.ravel()*(-1)
+            #optimal_trs = self.getEvaluationMetrics(valScores, name, axarr[0][plotNum])
+            
+            # Get the scores from the test DS, calculate ROC evaluation metric and get optimal trsh
+            tstScores = algorithm.decision_function(self.metricsTs)
+            optimal_trs = self.getEvaluationMetrics(tstScores, name, axarr[0][plotNum])
+            
             # Fit the data and tag outliers
-            y_pred = algorithm.predict(self.metricsTs)
-            scores = algorithm.decision_function(self.metricsTs)#.ravel()*(-1)
-
-            # Calculate evaluation metrics
-            self.getEvaluationMetrics(scores, name, axarr[0][plotNum])
+            y_pred = tstScores
+            
+            okIdx = np.where(tstScores >= optimal_trs)
+            nokIdx = np.where(tstScores < optimal_trs)
+            
+            y_pred[okIdx] = 1
+            y_pred[nokIdx] = -1
 
             # Calculate confusion matrix
             self.getConfusionMatrix(y_pred, name, axarr[1][plotNum])
@@ -218,7 +236,7 @@ class ModelClassificationBase():
             plotNum +=1
 
         fig.tight_layout()
-        fig.savefig(os.path.join(self.modelDataPath, self.layerSel + '-' + self.modelName  + '_' + self.labelInfo + '_' + self.actStr + self.featExtName +'_ClassEval.png'))
+        fig.savefig(os.path.join(self.modelDataPath, self.layerSel + '-' + self.modelName  + '_' + self.labelInfo + '_' + self.featExtName + '_ClassEval_.png'))
 
 
     ## Visualise the feature space
@@ -259,5 +277,5 @@ class ModelClassificationBase():
         axarr[1].legend(["OK", "NOK"], loc='upper right')
         
         fig.tight_layout()
-        fig.savefig(os.path.join(self.modelDataPath, self.layerSel + '-' + self.modelName  + '_' + self.labelInfo + self.actStr + self.featExtName +'_FeatureSpace.png'))
+        fig.savefig(os.path.join(self.modelDataPath, self.layerSel + '-' + self.modelName  + '_' + self.labelInfo + '_' + self.featExtName + '_FeatureSpace.png'))
         

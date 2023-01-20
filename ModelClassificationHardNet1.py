@@ -8,22 +8,15 @@ This class is used for the classification of the evaluated model
 
 """
 
-import os
-import keras
-import pickle
 import logging
 import traceback
 
 import cv2 as cv
 import numpy as np
-import tensorflow as tf
-import tensorflow.compat.v1 as tf1
-
-from sklearn.utils import gen_batches
-from sklearn.decomposition import PCA
-from fishervector import FisherVectorGMM
 
 from HardNet import HardNet
+from sklearn.utils import gen_batches
+
 from ModelClassificationBase import ModelClassificationBase
 
 class ModelClassificationHardNet1(ModelClassificationBase):
@@ -42,7 +35,11 @@ class ModelClassificationHardNet1(ModelClassificationBase):
         
         # Get data, metrics and classify the data
         try:
-            self.procDataFromFile()
+            if self.modelData:
+                self.procDataFromDict()
+            else:
+                self.procDataFromFile()
+                
             self.dataClassify()
         except:
             logging.error('An error occured during classification using ' + self.featExtName + ' feature extraction method...')
@@ -77,8 +74,5 @@ class ModelClassificationHardNet1(ModelClassificationBase):
         
         metrics = np.array(metrics)
         metrics = metrics.reshape(metrics.shape[0] * metrics.shape[1], metrics.shape[2])
-
-        # Visualise the data
-        self.fsVisualise(metrics, labels)
 
         return metrics, labels

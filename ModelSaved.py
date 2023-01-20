@@ -11,14 +11,10 @@ This class returns compiled autoencoder model later used in the ModelTrainAndEva
 import keras
 import logging
 import traceback
-import numpy as np
-import tensorflow as tf
 
 from keras import optimizers
-from keras import backend as K
 from keras.models import Model
-from keras.losses import binary_crossentropy
-from keras.layers import Input, Conv2D, Conv2DTranspose, MaxPooling2D, UpSampling2D, Dense, Flatten, Lambda, Reshape, BatchNormalization, LeakyReLU
+from keras.layers import Input, Conv2D, Dense, Flatten, Reshape
 
 from ModelLayers import ModelLayers
 from ModelHelperVAE import VAE, Sampling, VQVAETrainer, VectorQuantizer
