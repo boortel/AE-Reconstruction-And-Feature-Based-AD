@@ -10,6 +10,7 @@ This class is used to set data generators and to save the original data to the n
 
 import os
 import logging
+import traceback
 import cv2 as cv
 import numpy as np
 import tensorflow as tf
@@ -17,7 +18,7 @@ import tensorflow as tf
 class ModelDataGenerators():
     
     ## Set the constants and paths
-    def __init__(self, experimentPath, datasetPath, labelInfo, imageDim, batchSize):
+    def __init__(self, experimentPath, datasetPath, labelInfo, imageDim, batchSize, npzSave):
         
         # Set the paths and constants
         self.experimentPath = experimentPath
@@ -25,6 +26,7 @@ class ModelDataGenerators():
         self.labelInfo = labelInfo
         self.batchSize = batchSize
         self.imageDim = imageDim
+        self.npzSave = npzSave
         
         # Create datasets
         self.getGenerators()
@@ -140,8 +142,8 @@ class ModelDataGenerators():
         
         self.processedData = {}
         
-        actStrs = ['Train', 'Test']
-        dataGens = [self.dsTrainL, self.dsTestL] 
+        actStrs = ['Train', 'Test', 'Valid']
+        dataGens = [self.dsTrainL, self.dsTestL, self.dsValidL]
         
         for actStr, dataGen in zip(actStrs, dataGens):
             
@@ -149,6 +151,10 @@ class ModelDataGenerators():
         
             # Get the original data to be saved in npz
             orig_data = np.concatenate([img for img, _ in dataGen], axis=0)
+            
+            # Normalize the original data
+            for i in range(orig_data.shape[0]):
+                orig_data[i] = cv.normalize(orig_data[i], None, 0, 1, cv.NORM_MINMAX, cv.CV_32F)
 
             # Get labels and transform them to format to -1: NOK and 1:OK
             labels = np.concatenate([labels for _, labels in dataGen], axis=0)
@@ -160,8 +166,9 @@ class ModelDataGenerators():
             orig_data = np.array([(filterStrength*img + (1 - filterStrength)*cv.GaussianBlur(img, (25,25), 0)) for img in orig_data])
 
             # Save the obtained data to NPZ
-            outputPath = os.path.join(self.experimentPath, 'Org_' + actStr)
-            np.savez_compressed(outputPath, orgData = orig_data, labels = labels)
+            if self.npzSave:
+                outputPath = os.path.join(self.experimentPath, 'Org_' + actStr)
+                np.savez_compressed(outputPath, orgData = orig_data, labels = labels)
             
             # Save the processed data to dictionary for a later acces
             tempDict = {'Org': orig_data, 'Lab': labels}

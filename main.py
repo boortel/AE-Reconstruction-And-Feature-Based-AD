@@ -31,8 +31,8 @@ from ModelClassificationHardNet4 import ModelClassificationHardNet4
 def parse_args():
     parser = argparse.ArgumentParser(description = 'Train and evaluate models defined in the ini files of the init directory')
     
-    parser.add_argument('--modelTrain', default = False, type = bool, help = 'Set True for model training')
-    parser.add_argument('--modelEval', default = False, type = bool, help = 'Set True for model evaluation')
+    parser.add_argument('--modelTrain', default = True, type = bool, help = 'Set True for model training')
+    parser.add_argument('--modelEval', default = True, type = bool, help = 'Set True for model evaluation')
 
     args = parser.parse_args()
 
@@ -73,9 +73,11 @@ def main():
             # General
             experimentPath = cfg.get('General', 'modelBasePath', fallback = 'NaN')
             labelInfo = cfg.get('General', 'labelInfo', fallback = 'NaN')
+            npzSave = cfg.getboolean('General', 'npzSave', fallback = 'False')
             imageDim = (cfg.getint('General', 'imHeight', fallback = '0'), 
                         cfg.getint('General', 'imWidth', fallback = '0'),
                         cfg.getint('General', 'imChannel', fallback = '0'))
+            imIndxList = cfg.get('General', 'imIndxList', fallback = 'NaN')
 
             # Training
             layerSel = cfg.get('Training', 'layerSel', fallback = 'NaN')
@@ -84,7 +86,9 @@ def main():
             batchSize = cfg.getint('Training', 'batchSize', fallback = '0')
             numEpoch = cfg.getint('Training', 'numEpoch', fallback = '0')
             
-            # Parse the layers and models names
+            # Parse the img indeces, layers and model's names lists
+            imIndxList = (imIndxList.replace(" ", "")).split(",")
+            imIndxList = list(map(int, imIndxList))
             layerSel = (layerSel.replace(" ", "")).split(",")
             modelSel = (modelSel.replace(" ", "")).split(",")
             
@@ -100,7 +104,7 @@ def main():
                 os.makedirs(experimentPath)
             
             # Create the experiment related data generator object
-            dataGenerator = ModelDataGenerators(experimentPath, datasetPath, labelInfo, imageDim, batchSize)     
+            dataGenerator = ModelDataGenerators(experimentPath, datasetPath, labelInfo, imageDim, batchSize, npzSave)     
             
             # Loop through the selected convolutional layers
             for layer in layerSel:
@@ -124,7 +128,7 @@ def main():
 
                         # Train and evaluate the model
                         try:
-                            modelObj = ModelTrainAndEval(modelPath, model, layer, dataGenerator, labelInfo, imageDim, numEpoch, modelTrain, modelEval)
+                            modelObj = ModelTrainAndEval(modelPath, model, layer, dataGenerator, labelInfo, imageDim, imIndxList, numEpoch, modelTrain, modelEval, npzSave)
                             
                             modelData = modelObj.returnProcessedData()
                         except:
@@ -132,21 +136,19 @@ def main():
                             traceback.print_exc()
                         else:
                             logging.info('Model ' + model + ' was trained succesfuly...')
+                        
+                    # Classify the model results 
+                    ModelClassificationErrM(modelDataPath, experimentPath, model, layer, labelInfo, imageDim, modelData)
 
-                    if True:
-                        
-                        # Classify the model results 
-                        ModelClassificationErrM(modelDataPath, experimentPath, model, layer, labelInfo, imageDim, modelData)
-                        
-                        ModelClassificationSIFT(modelDataPath, experimentPath, model, layer, labelInfo, imageDim, modelData, 'Points')
-                        
-                        #ModelClassificationHardNet1(modelDataPath, experimentPath, model, layer, labelInfo, imageDim, modelData)
-                        
-                        ModelClassificationHardNet2(modelDataPath, experimentPath, model, layer, labelInfo, imageDim, modelData)
-                        
-                        ModelClassificationHardNet3(modelDataPath, experimentPath, model, layer, labelInfo, imageDim, modelData)
-                        
-                        ModelClassificationHardNet4(modelDataPath, experimentPath, model, layer, labelInfo, imageDim, modelData)
+                    ModelClassificationSIFT(modelDataPath, experimentPath, model, layer, labelInfo, imageDim, modelData)
+
+                    ModelClassificationHardNet1(modelDataPath, experimentPath, model, layer, labelInfo, imageDim, modelData)
+
+                    #ModelClassificationHardNet2(modelDataPath, experimentPath, model, layer, labelInfo, imageDim, modelData)
+
+                    ModelClassificationHardNet3(modelDataPath, experimentPath, model, layer, labelInfo, imageDim, modelData)
+
+                    #ModelClassificationHardNet4(modelDataPath, experimentPath, model, layer, labelInfo, imageDim, modelData)
                         
 
 if __name__ == '__main__':
