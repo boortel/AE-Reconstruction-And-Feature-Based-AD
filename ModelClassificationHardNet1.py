@@ -56,7 +56,6 @@ class ModelClassificationHardNet1(ModelClassificationBase):
         
         # Initialize the conversion and metric lists
         gsData = []
-        metrics = []
         
         # Convert the data to grayscale and to required shape (batch, height, width, channel)
         for img in diffData:
@@ -67,12 +66,16 @@ class ModelClassificationHardNet1(ModelClassificationBase):
         
         # Generate batches
         batches = gen_batches(gsData.shape[0], 20)
+        fsRun = True
         
         # Get HardNet features  
         for batch in batches:
-            metrics.append(self.hardNet.forward(gsData[batch]))
-        
-        metrics = np.array(metrics)
-        metrics = metrics.reshape(metrics.shape[0] * metrics.shape[1], metrics.shape[2])
+            temp = self.hardNet.forward(gsData[batch])
+            
+            if fsRun:
+                metrics = temp
+                fsRun = False
+            else:
+                metrics = np.concatenate((metrics, temp), axis=0)
 
         return metrics, labels

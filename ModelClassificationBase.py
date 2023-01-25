@@ -91,13 +91,13 @@ class ModelClassificationBase():
             if self.actStr == 'Train':
 
                 # Store the data and get the metrics
-                self.processedData = {'Org': self.modelData[actStr]['Org'], 'Dec': self.modelData[actStr]['Dec'], 'Lab': self.modelData[actStr]['Lab']}
+                self.processedData = {'Org': self.modelData[actStr]['Org'], 'Enc': self.modelData[actStr]['Enc'], 'Dec': self.modelData[actStr]['Dec'], 'Lab': self.modelData[actStr]['Lab']}
                 self.metricsTr, _ = self.computeMetrics(self.processedData)
 
             elif self.actStr == 'Test':
 
                 # Store the data and get the metrics
-                self.processedData = {'Org': self.modelData[actStr]['Org'], 'Dec': self.modelData[actStr]['Dec'], 'Lab': self.modelData[actStr]['Lab']}
+                self.processedData = {'Org': self.modelData[actStr]['Org'], 'Enc': self.modelData[actStr]['Enc'], 'Dec': self.modelData[actStr]['Dec'], 'Lab': self.modelData[actStr]['Lab']}
                 self.metricsTs, self.labelsTs = self.computeMetrics(self.processedData)
                 
                 # Visualise the data
@@ -106,7 +106,7 @@ class ModelClassificationBase():
             elif self.actStr == 'Valid':
 
                 # Store the data and get the metrics
-                self.processedData = {'Org': self.modelData[actStr]['Org'], 'Dec': self.modelData[actStr]['Dec'], 'Lab': self.modelData[actStr]['Lab']}
+                self.processedData = {'Org': self.modelData[actStr]['Org'], 'Enc': self.modelData[actStr]['Enc'], 'Dec': self.modelData[actStr]['Dec'], 'Lab': self.modelData[actStr]['Lab']}
                 self.metricsVl, self.labelsVl = self.computeMetrics(self.processedData)
             
             
@@ -198,8 +198,8 @@ class ModelClassificationBase():
         fig, axarr = plt.subplots(2, len(anomaly_algorithms))
         fig.set_size_inches(16, 8)
 
-        tempTitle = "Classification results of the " + self.layerSel + '-' + self.modelName + '_' + self.labelInfo + " AE model with " + self.featExtName + " feature extraction."
-        fig.suptitle(tempTitle, fontsize=14, y=1.08)
+        tempTitle = "Classification results of the " + self.layerSel + '-' + self.modelName + '_' + self.labelInfo + " model using " + self.featExtName + " feature extraction"
+        fig.suptitle(tempTitle, fontsize=16)
         #fig.subplots_adjust(left=0.02, right=0.98, bottom=0.001, top=0.96, wspace=0.05, hspace=0.01)
 
         plotNum = 0
@@ -236,19 +236,27 @@ class ModelClassificationBase():
             plotNum +=1
 
         fig.tight_layout()
+        fig.subplots_adjust(top=0.88)
+        
         fig.savefig(os.path.join(self.modelDataPath, self.layerSel + '-' + self.modelName  + '_' + self.labelInfo + '_' + self.featExtName + '_ClassEval_.png'))
 
 
     ## Visualise the feature space
     def fsVisualise(self, metrics, labels):
-
+        
         # Reduce the dimensionality of metrics for t-SNE transformation
         if metrics.shape[0] > 50 and metrics.shape[1] > 50:
             pca_red = PCA(n_components = 50)
             metrics = pca_red.fit_transform(metrics)
-
+        
         # Perform the t-SNE and feature space visualisation
-        tsne_metrics = TSNE(n_components=2, perplexity=30, n_iter=1000, learning_rate=100, init='pca').fit_transform(metrics)
+        if metrics.shape[0] < 30:
+            # Set perplexity as a half value to the number of samples for small datasets
+            perp = int(metrics.shape[0]/2)
+        else:
+            perp = 30
+        
+        tsne_metrics = TSNE(n_components=2, perplexity=perp, n_iter=1000, learning_rate=100, init='pca').fit_transform(metrics)
 
         # Perform the PCA and feature space visualisation
         pca = PCA(n_components=2)
@@ -258,8 +266,8 @@ class ModelClassificationBase():
         fig, axarr = plt.subplots(2)
         fig.set_size_inches(8, 8)
 
-        tempTitle = " Feature space visualisations " + self.layerSel + '-' + self.modelName + '_' + self.labelInfo + " model."
-        fig.suptitle(tempTitle, fontsize=14, y=1.08)
+        tempTitle = "FS visualisations of the " + self.layerSel + '-' + self.modelName + '_' + self.labelInfo + " model using " + self.featExtName + " feature extraction"
+        fig.suptitle(tempTitle, fontsize=12)
 
         okIdx = np.where(labels == 1)
         nokIdx = np.where(labels == -1)
@@ -277,5 +285,7 @@ class ModelClassificationBase():
         axarr[1].legend(["OK", "NOK"], loc='upper right')
         
         fig.tight_layout()
+        fig.subplots_adjust(top=0.88)
+        
         fig.savefig(os.path.join(self.modelDataPath, self.layerSel + '-' + self.modelName  + '_' + self.labelInfo + '_' + self.featExtName + '_FeatureSpace.png'))
         

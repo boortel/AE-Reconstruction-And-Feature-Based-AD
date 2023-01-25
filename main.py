@@ -19,6 +19,7 @@ import configparser
 
 from ModelTrainAndEval import ModelTrainAndEval
 from ModelDataGenerators import ModelDataGenerators
+from ModelClassificationEnc import ModelClassificationEnc
 from ModelClassificationErrM import ModelClassificationErrM
 from ModelClassificationSIFT import ModelClassificationSIFT
 from ModelClassificationHardNet1 import ModelClassificationHardNet1
@@ -138,6 +139,9 @@ def main():
                             logging.info('Model ' + model + ' was trained succesfuly...')
                         
                     # Classify the model results 
+                    
+                    #ModelClassificationEnc(modelDataPath, experimentPath, model, layer, labelInfo, imageDim, modelData)
+                    
                     ModelClassificationErrM(modelDataPath, experimentPath, model, layer, labelInfo, imageDim, modelData)
 
                     ModelClassificationSIFT(modelDataPath, experimentPath, model, layer, labelInfo, imageDim, modelData)

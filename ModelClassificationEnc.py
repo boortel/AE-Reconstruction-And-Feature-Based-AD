@@ -15,7 +15,7 @@ import numpy as np
 
 from ModelClassificationBase import ModelClassificationBase
 
-class ModelClassificationErrM(ModelClassificationBase):
+class ModelClassificationEnc(ModelClassificationBase):
 
     ## Constructor
     def __init__(self, modelDataPath, experimentPath, modelSel, layerSel, labelInfo, imageDim, modelData):
@@ -44,10 +44,13 @@ class ModelClassificationErrM(ModelClassificationBase):
         encData = processedData.get('Enc')
         labels = processedData.get('Lab')
         
-        #TODO: Flatten the encoded space
+        metrics = []
         
+        #Flatten the encoded space
+        for data in encData:
+            metrics.append(data.flatten())
 
         # Get metrics np array
-        metrics = self.normalize2DData()
+        metrics = self.normalize2DData(np.array(metrics))
 
         return metrics, labels

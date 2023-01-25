@@ -117,7 +117,7 @@ class ModelTrainAndEval():
                 verbose = 1,
                 callbacks = [self.esCallBack])
             
-            self.model.save(self.modelPath, save_format="hdf5", save_traces = True)
+            #self.model.save(self.modelPath, save_format="hdf5", save_traces = True)
 
         except:
             logging.error('Training of the ' + self.layerName + '-' + self.modelName + ' model failed...')
@@ -171,11 +171,11 @@ class ModelTrainAndEval():
                     np.savez_compressed(outputPath, encData = enc_out, decData = dec_out)
 
                 # Visualise the obtained data
-                if actStr == 'Test' or actStr == 'Train':
+                if actStr == 'Test':
                     self.visualiseEncDecResults(actStr)
 
                 # Get the Pearson correlation coeff.
-                if actStr == 'Valid':
+                if actStr == 'Test':
                     self.getSimilarityCoeff(dec_out)
 
             except:
@@ -234,7 +234,8 @@ class ModelTrainAndEval():
                     
                     # Compute Pearson Coefficient
                     pears = stats.pearsonr(subImgOrg.flatten(), subImgDec.flatten())
-                    temppVal.append(pears.statistic)
+                    if not np.isnan(pears.statistic):
+                        temppVal.append(pears.statistic)
                     
                 pVal.append(np.average(np.array(temppVal)))
             
@@ -279,16 +280,18 @@ class ModelTrainAndEval():
             if self.typeAE == 'VAE1' or self.typeAE == 'VAE2':
                 val_loss = self.trainHistory.history['kl_loss']
                 plotLabel = 'KL loss [-]'
+                tempTitle = 'Training and KL Loss of ' + self.layerName + '-' + self.modelName + '_' + self.labelInfo + ' model'
             elif self.typeAE == 'VQVAE1':
                 val_loss = self.trainHistory.history['vqvae_loss']
                 plotLabel = 'VQ-VAE loss [-]'
+                tempTitle = 'Training and VQ-VAE Loss of ' + self.layerName + '-' + self.modelName + '_' + self.labelInfo + ' model'
             else:
                 val_loss = self.trainHistory.history['val_loss']
                 plotLabel = 'Validation loss [-]'
+                tempTitle = 'Training and Validation Loss of ' + self.layerName + '-' + self.modelName + '_' + self.labelInfo + ' model'
             
             fig, axarr = plt.subplots(2)
-            tempTitle = " Training and Validation Loss of " + self.layerName + '-' + self.modelName + '_' + self.labelInfo + " model."
-            fig.suptitle(tempTitle, fontsize=14, y=1.08)
+            fig.suptitle(tempTitle, fontsize=14)
             
             axarr[0].plot(train_loss)
             axarr[0].set(xlabel = 'Number of Epochs', ylabel = 'Training Loss [-]')
@@ -297,6 +300,8 @@ class ModelTrainAndEval():
             axarr[1].set(xlabel = 'Number of Epochs', ylabel = plotLabel)
             
             fig.tight_layout()
+            fig.subplots_adjust(top=0.88)
+            
             fig.savefig(os.path.join(self.modelPath, 'modelData', self.layerName + '-' + self.modelName + '_' + self.labelInfo + '_TrainLosses.png'))
         
         except:
@@ -334,9 +339,9 @@ class ModelTrainAndEval():
 
             # Plot the encoded samples from all classes
             fig, axarr = plt.subplots(len(self.imIndxList), 4)
-            tempTitle = 'Results of the ' + self.layerName + '-' + self.modelName + ' autoencoder model ' + label + ' and ' + self.labelInfo + ' experiment.'
+            tempTitle = 'Visualisations of the ' + self.layerName + '-' + self.modelName + '_' + self.labelInfo + ' model'
             
-            fig.suptitle(tempTitle, fontsize=16)
+            fig.suptitle(tempTitle, fontsize=18)
             fig.set_size_inches(4 * len(self.imIndxList), 16)
             
             vIdx = 0
@@ -376,6 +381,9 @@ class ModelTrainAndEval():
                 vIdx += 1
 
             # Save the illustration figure
+            fig.tight_layout()
+            fig.subplots_adjust(top=0.88)
+            
             fig.savefig(os.path.join(self.modelPath, 'modelData', self.layerName + '-' + self.modelName + '_' + self.labelInfo + '_' + actStr + '_AEResults.png'))
         
         except:
