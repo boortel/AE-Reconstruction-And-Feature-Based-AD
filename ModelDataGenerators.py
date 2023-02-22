@@ -47,8 +47,12 @@ class ModelDataGenerators():
         
         # Random image inversion and saturation
         x_norm = (1-x_norm) if tf.random.uniform([]) < 0.5 else x_norm
-        x_norm = tf.image.adjust_saturation(x_norm, 3)
+        x_norm = tf.image.stateless_random_saturation(x_norm, 0.5, 1.0)
         
+        # Random brightness and hue
+        x_norm = tf.image.stateless_random_brightness(x_norm, 0.2)
+        x_norm = tf.image.stateless_random_hue(x_norm, 0.2)
+
         # Add salt and pepper noise
         random_values = tf.random.uniform(shape=x_norm[0, ..., -1:].shape)
         x_noise = tf.where(random_values < 0.1, 1., x_norm)

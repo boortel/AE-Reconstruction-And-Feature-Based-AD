@@ -88,7 +88,7 @@ class ModelClassificationHardNet3(ModelClassificationBase):
             
             metrics.append(np.array(dist))
 
-        # Convert the metrics to np array
-        metrics = np.array(metrics)
+        # Convert the metrics to np array and normalize them
+        metrics = self.normalize2DData(np.array(metrics))
 
         return metrics, labels

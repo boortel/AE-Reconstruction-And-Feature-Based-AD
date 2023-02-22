@@ -75,7 +75,7 @@ class ModelClassificationHardNet2(ModelClassificationBase):
             norms = np.linalg.norm(temp, None, axis=0)
             metrics.append(norms)
 
-        # Convert the metrics to np array
-        metrics = np.array(metrics)
+        # Convert the metrics to np array and normalize them
+        metrics = self.normalize2DData(np.array(metrics))
 
         return metrics, labels

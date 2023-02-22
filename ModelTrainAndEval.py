@@ -235,20 +235,20 @@ class ModelTrainAndEval():
                     # Compute Pearson Coefficient
                     pears = stats.pearsonr(subImgOrg.flatten(), subImgDec.flatten())
                     if not np.isnan(pears.statistic):
-                        temppVal.append(pears.statistic)
+                        temppVal.append(np.abs(pears.statistic))
                     
-                pVal.append(np.average(np.array(temppVal)))
+                pVal.append(np.median(np.array(temppVal)))
             
-            # Compute average SSIM
-            ssimVal = np.average(np.array(ssimVal))
+            # Compute median SSIM
+            ssimVal = np.median(np.array(ssimVal))
             ssimAvg.append(ssimVal)
             
-            # Compute average p-value
-            pVal = np.average(np.array(pVal))
+            # Compute median p-value
+            pVal = np.median(np.array(pVal))
             pAvg.append(pVal)
             
-            logging.info('Average Pearson Coefficient: ' + f'{float(pVal):.2f}' + ' for class ' + classLb)
-            logging.info('Average SSIM value: ' + f'{float(ssimVal):.2f}' + ' for class ' + classLb)
+            logging.info('Median Pearson Coefficient: ' + f'{float(pVal):.2f}' + ' for class ' + classLb)
+            logging.info('Median SSIM value: ' + f'{float(ssimVal):.2f}' + ' for class ' + classLb)
         
         # Compute the ratio between the Pearson coeffs and SSIM by the OK and NOK data
         if pAvg[1] == 0:

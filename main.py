@@ -15,6 +15,7 @@ import logging
 import argparse
 import warnings
 import traceback
+import matplotlib
 import configparser
 
 from ModelTrainAndEval import ModelTrainAndEval
@@ -148,12 +149,14 @@ def main():
 
                     ModelClassificationHardNet1(modelDataPath, experimentPath, model, layer, labelInfo, imageDim, modelData)
 
-                    #ModelClassificationHardNet2(modelDataPath, experimentPath, model, layer, labelInfo, imageDim, modelData)
+                    ModelClassificationHardNet2(modelDataPath, experimentPath, model, layer, labelInfo, imageDim, modelData)
 
                     ModelClassificationHardNet3(modelDataPath, experimentPath, model, layer, labelInfo, imageDim, modelData)
 
-                    #ModelClassificationHardNet4(modelDataPath, experimentPath, model, layer, labelInfo, imageDim, modelData)
-                        
+                    ModelClassificationHardNet4(modelDataPath, experimentPath, model, layer, labelInfo, imageDim, modelData)
+                    
+                    # Close the opened figures to spare memory
+                    matplotlib.pyplot.close()
 
 if __name__ == '__main__':
     main()
