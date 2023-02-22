@@ -22,7 +22,8 @@ from sklearn.ensemble import IsolationForest
 from sklearn.preprocessing import RobustScaler
 from sklearn.covariance import EllipticEnvelope
 from sklearn.neighbors import LocalOutlierFactor
-from sklearn.metrics import precision_recall_curve, auc, roc_auc_score, roc_curve, confusion_matrix, ConfusionMatrixDisplay
+from sklearn.metrics import precision_recall_curve, auc, roc_auc_score, roc_curve, confusion_matrix, ConfusionMatrixDisplay, precision_score, recall_score, f1_score
+
 
 class ModelClassificationBase():
 
@@ -130,15 +131,16 @@ class ModelClassificationBase():
         
         # Get the ROC curve
         precision, recall, _ = precision_recall_curve(self.labelsTs, scores)
+        
         prc_auc = auc(recall, precision)
-
         roc_auc = roc_auc_score(self.labelsTs, scores)
+        
         fpr, tpr, trs = roc_curve(self.labelsTs, scores)
         
         # Log the information
         logging.info("Algorithm: " + name)
-        logging.info("AUC-ROC: " + f'{float(roc_auc):.2f}')
-        logging.info("AUC-PRE: " + f'{float(prc_auc):.2f}')
+        logging.info("AUC-ROC: "   + f'{float(roc_auc):.2f}')
+        logging.info("AUC-PRE: "   + f'{float(prc_auc):.2f}')
         
         # Plot the ROC
         ax.plot(fpr, tpr)
@@ -160,6 +162,14 @@ class ModelClassificationBase():
     def getConfusionMatrix(self, labelsPred, name, ax):
 
         cm = confusion_matrix(self.labelsTs, labelsPred)
+        
+        precision = precision_score(self.labelsTs, labelsPred)
+        recall = recall_score(self.labelsTs, labelsPred)
+        f1score = f1_score(self.labelsTs, labelsPred)
+        
+        logging.info("Precision: " + f'{float(precision):.2f}')
+        logging.info("Recall: "    + f'{float(recall):.2f}')
+        logging.info("F1-score: "  + f'{float(f1score):.2f}')
         
         # Get the TPR and TNR
         tnr = cm[0, 0]/(cm[0, 0] + cm[0, 1])

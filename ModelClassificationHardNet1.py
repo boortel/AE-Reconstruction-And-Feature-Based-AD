@@ -77,5 +77,8 @@ class ModelClassificationHardNet1(ModelClassificationBase):
                 fsRun = False
             else:
                 metrics = np.concatenate((metrics, temp), axis=0)
+                
+        # Convert the metrics to np array and normalize them
+        metrics = self.normalize2DData(metrics)
 
         return metrics, labels
