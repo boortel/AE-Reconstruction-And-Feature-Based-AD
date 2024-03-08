@@ -10,20 +10,24 @@ def main():
     args = parser.parse_args()
     str_input = args.input
     str_output = args.output
-    str_output_all = os.path.join(os.path.dirname(args.input),"parsed-all-log.json")
+    str_output_all = os.path.join(os.path.dirname(args.input),"parsed-all-log_CookieLot.json")
     dictionary = {}
+
     with open(str_input) as f:
         txt = f.read()
         datasets_txt = txt.split('Data generators of the ')
         datasets_txt=datasets_txt[1:]
+
         for dataset_txt in datasets_txt:
             dataset_name = dataset_txt.split('\n', 1)[0].split(' ')[0]
             dictionary[dataset_name]={'models':{}}
             models_txt = dataset_txt.split('Training of the ')
             models_txt = models_txt[1:]
+
             for model_txt in models_txt:
                 model_name = model_txt.split('\n', 1)[0].split(' ')[0]
                 sep = False
+
                 try:
                     pearson_nok = model_txt.split('Median Pearson Coefficient: ', 1)[1].split(' ')[0]
                     pearson_ok = model_txt.split('Median Pearson Coefficient: ', 2)[2].split(' ')[0]
@@ -63,10 +67,12 @@ def main():
                     f_exts_txt = model_txt.split('Feature extraction method: ')
                     f_exts_txt = f_exts_txt[1:]
                     sep = True
+
                 for f_ext_txt in f_exts_txt:
                     sep1 = False
                     f_ext_name = f_ext_txt.split('\n', 1)[0].split(' ')[0]
                     dictionary[dataset_name]['models'][model_name]["f_exts"][f_ext_name] = {"classifiers":{}}
+
                     if sep1 == False:
                         algos_txt = f_ext_txt.split('Algorithm: ')
                         algos_txt = algos_txt[1:5]
@@ -97,6 +103,7 @@ def main():
     ssim_r2 = 100
     with open(str_output_all) as f:
         log = json.load(f)
+
         for dataset_name, models in log.items():
             best_c_roc_roc = -1
             best_c_roc_pre = -1
@@ -120,6 +127,7 @@ def main():
                     pre1 = 0
                     f1_1 = 0
                     recall1 = 0
+                    
                     for f_ext_name, f_ext in f_exts['f_exts'].items():
                         for classifier_name, classifiers in f_ext['classifiers'].items():
                             if classifiers['alg_metrics']['auc-roc'] > auc_roc1 and classifiers['alg_metrics']['auc-pre'] > auc_pre1:

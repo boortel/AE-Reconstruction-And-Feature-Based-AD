@@ -4,38 +4,42 @@ import json
 def main():
 
     # Open JSON files as dictionary
-    f = open('parsed-all-log_PlanktonAll.json')
+    f = open('parsed-all-log_CookieLot.json')
     dataAll = json.load(f)
 
-    PlanktonAll_OCC = dataAll['PlanktonAll_OCC']
+    Datasets = dataAll['Cookie_OCC']
 
-    f = open('parsed-all-log_PlanktonSpec.json')
+    f = open('parsed-all-log_CookieLot.json')
     dataPln = json.load(f)
 
 
     ## Find results of the model-extractor-classifier (MEC) with the highest AUC
     bestMEC = {'model': '', 'f_ext': '', 'class': '', 'AUC': 0, 'PREC': 0, 'REC': 0, 'F1': 0}
+    bestF1 = 0
     bestAUC = 0
 
     # Loop through all models
-    for model in PlanktonAll_OCC['models']:
+    for model in Datasets['models']:
 
         # Loop through all feature extractors
-        for f_ext in PlanktonAll_OCC['models'][model]['f_exts']:
+        for f_ext in Datasets['models'][model]['f_exts']:
 
             # Loop through all classifiers
-            for clas in PlanktonAll_OCC['models'][model]['f_exts'][f_ext]['classifiers']:
+            for clas in Datasets['models'][model]['f_exts'][f_ext]['classifiers']:
                 
-                if bestAUC <= PlanktonAll_OCC['models'][model]['f_exts'][f_ext]['classifiers'][clas]['alg_metrics']['f1']:
+                if bestF1 <= Datasets['models'][model]['f_exts'][f_ext]['classifiers'][clas]['alg_metrics']['f1']:
+
+                    # Continue if the AUC is equal or higher
+                    if bestF1 == Datasets['models'][model]['f_exts'][f_ext]['classifiers'][clas]['alg_metrics']['f1'] and bestAUC >= Datasets['models'][model]['f_exts'][f_ext]['classifiers'][clas]['alg_metrics']['auc-roc']:
+
+                        continue
                     
-                    # Assign the best AUC and MEC parameters
-                    bestAUC = PlanktonAll_OCC['models'][model]['f_exts'][f_ext]['classifiers'][clas]['alg_metrics']['f1']
+                    # Assign the best MEC, AUC and F1 parameters
+                    AUC = Datasets['models'][model]['f_exts'][f_ext]['classifiers'][clas]['alg_metrics']['auc-roc']
 
-                    AUC = PlanktonAll_OCC['models'][model]['f_exts'][f_ext]['classifiers'][clas]['alg_metrics']['auc-roc']
-
-                    PREC = PlanktonAll_OCC['models'][model]['f_exts'][f_ext]['classifiers'][clas]['alg_metrics']['precision']
-                    REC = PlanktonAll_OCC['models'][model]['f_exts'][f_ext]['classifiers'][clas]['alg_metrics']['recall']
-                    F1 = PlanktonAll_OCC['models'][model]['f_exts'][f_ext]['classifiers'][clas]['alg_metrics']['f1']
+                    PREC = Datasets['models'][model]['f_exts'][f_ext]['classifiers'][clas]['alg_metrics']['precision']
+                    REC = Datasets['models'][model]['f_exts'][f_ext]['classifiers'][clas]['alg_metrics']['recall']
+                    F1 = Datasets['models'][model]['f_exts'][f_ext]['classifiers'][clas]['alg_metrics']['f1']
 
                     bestMEC['model'] = model
                     bestMEC['f_ext'] = f_ext
@@ -46,7 +50,31 @@ def main():
                     bestMEC['REC'] = REC
                     bestMEC['F1'] = F1
 
+                    bestF1 = Datasets['models'][model]['f_exts'][f_ext]['classifiers'][clas]['alg_metrics']['f1']
+                    bestAUC = Datasets['models'][model]['f_exts'][f_ext]['classifiers'][clas]['alg_metrics']['auc-roc']
 
+    
+    ## Print the same-performing combinations
+
+    # Loop through all models
+    for model in Datasets['models']:
+
+        # Loop through all feature extractors
+        for f_ext in Datasets['models'][model]['f_exts']:
+
+            # Loop through all classifiers
+            for clas in Datasets['models'][model]['f_exts'][f_ext]['classifiers']:
+                
+                if bestF1 == Datasets['models'][model]['f_exts'][f_ext]['classifiers'][clas]['alg_metrics']['f1'] and bestAUC == Datasets['models'][model]['f_exts'][f_ext]['classifiers'][clas]['alg_metrics']['auc-roc']:
+
+                    # Print the most optimal model parameters
+                    F1 = Datasets['models'][model]['f_exts'][f_ext]['classifiers'][clas]['alg_metrics']['f1']
+                    AUC = Datasets['models'][model]['f_exts'][f_ext]['classifiers'][clas]['alg_metrics']['auc-roc']
+
+                    print('Model: ' + model + ' ,Feature extractor: ' + f_ext + ' ,Classifier: ' + clas + ', F1 score: ' + f'{float(F1):.2f}' + ' , AUC: ' + f'{float(AUC):.2f}')
+
+
+    
     ## Get per-species results for the selected MEC (Tab1)
     speciesRes = {}
 
@@ -65,13 +93,13 @@ def main():
     fixedEC = {}
 
     # Loop through all models
-    for model in PlanktonAll_OCC['models']:
+    for model in Datasets['models']:
 
-        AUC = PlanktonAll_OCC['models'][model]['f_exts'][bestMEC['f_ext']]['classifiers'][bestMEC['class']]['alg_metrics']['auc-roc']
+        AUC = Datasets['models'][model]['f_exts'][bestMEC['f_ext']]['classifiers'][bestMEC['class']]['alg_metrics']['auc-roc']
 
-        PREC = PlanktonAll_OCC['models'][model]['f_exts'][bestMEC['f_ext']]['classifiers'][bestMEC['class']]['alg_metrics']['precision']
-        REC = PlanktonAll_OCC['models'][model]['f_exts'][bestMEC['f_ext']]['classifiers'][bestMEC['class']]['alg_metrics']['recall']
-        F1 = PlanktonAll_OCC['models'][model]['f_exts'][bestMEC['f_ext']]['classifiers'][bestMEC['class']]['alg_metrics']['f1']
+        PREC = Datasets['models'][model]['f_exts'][bestMEC['f_ext']]['classifiers'][bestMEC['class']]['alg_metrics']['precision']
+        REC = Datasets['models'][model]['f_exts'][bestMEC['f_ext']]['classifiers'][bestMEC['class']]['alg_metrics']['recall']
+        F1 = Datasets['models'][model]['f_exts'][bestMEC['f_ext']]['classifiers'][bestMEC['class']]['alg_metrics']['f1']
 
         fixedEC[model] = {'AUC': AUC, 'PREC': PREC, 'REC': REC, 'F1': F1}
 
@@ -80,34 +108,42 @@ def main():
     fixedMC = {}
 
     # Loop through all feature extractors
-    for f_ext in PlanktonAll_OCC['models'][bestMEC['model']]['f_exts']:
+    for f_ext in Datasets['models'][bestMEC['model']]['f_exts']:
 
-        AUC = PlanktonAll_OCC['models'][bestMEC['model']]['f_exts'][f_ext]['classifiers'][bestMEC['class']]['alg_metrics']['auc-roc']
+        try:
 
-        PREC = PlanktonAll_OCC['models'][bestMEC['model']]['f_exts'][f_ext]['classifiers'][bestMEC['class']]['alg_metrics']['precision']
-        REC = PlanktonAll_OCC['models'][bestMEC['model']]['f_exts'][f_ext]['classifiers'][bestMEC['class']]['alg_metrics']['recall']
-        F1 = PlanktonAll_OCC['models'][bestMEC['model']]['f_exts'][f_ext]['classifiers'][bestMEC['class']]['alg_metrics']['f1']
+            AUC = Datasets['models'][bestMEC['model']]['f_exts'][f_ext]['classifiers'][bestMEC['class']]['alg_metrics']['auc-roc']
 
-        fixedMC[f_ext] = {'AUC': AUC, 'PREC': PREC, 'REC': REC, 'F1': F1}
+            PREC = Datasets['models'][bestMEC['model']]['f_exts'][f_ext]['classifiers'][bestMEC['class']]['alg_metrics']['precision']
+            REC = Datasets['models'][bestMEC['model']]['f_exts'][f_ext]['classifiers'][bestMEC['class']]['alg_metrics']['recall']
+            F1 = Datasets['models'][bestMEC['model']]['f_exts'][f_ext]['classifiers'][bestMEC['class']]['alg_metrics']['f1']
+
+            fixedMC[f_ext] = {'AUC': AUC, 'PREC': PREC, 'REC': REC, 'F1': F1}
+
+        except:
+
+            print('Feature extractor ' + f_ext + ' error. Results are set as a non-valid.')
+            fixedMC[f_ext] = {'AUC': float("NaN"), 'PREC': float("NaN"), 'REC': float("NaN"), 'F1': float("NaN")}
 
 
     ## Fix model and feature extractor, get results for all feature classifiers (Tab4)
     fixedME = {}
 
     # Loop through all classifiers
-    for clas in PlanktonAll_OCC['models'][bestMEC['model']]['f_exts'][bestMEC['f_ext']]['classifiers']:
+    for clas in Datasets['models'][bestMEC['model']]['f_exts'][bestMEC['f_ext']]['classifiers']:
 
-        AUC = PlanktonAll_OCC['models'][bestMEC['model']]['f_exts'][bestMEC['f_ext']]['classifiers'][clas]['alg_metrics']['auc-roc']
+        AUC = Datasets['models'][bestMEC['model']]['f_exts'][bestMEC['f_ext']]['classifiers'][clas]['alg_metrics']['auc-roc']
 
-        PREC = PlanktonAll_OCC['models'][bestMEC['model']]['f_exts'][bestMEC['f_ext']]['classifiers'][clas]['alg_metrics']['precision']
-        REC = PlanktonAll_OCC['models'][bestMEC['model']]['f_exts'][bestMEC['f_ext']]['classifiers'][clas]['alg_metrics']['recall']
-        F1 = PlanktonAll_OCC['models'][bestMEC['model']]['f_exts'][bestMEC['f_ext']]['classifiers'][clas]['alg_metrics']['f1']
+        PREC = Datasets['models'][bestMEC['model']]['f_exts'][bestMEC['f_ext']]['classifiers'][clas]['alg_metrics']['precision']
+        REC = Datasets['models'][bestMEC['model']]['f_exts'][bestMEC['f_ext']]['classifiers'][clas]['alg_metrics']['recall']
+        F1 = Datasets['models'][bestMEC['model']]['f_exts'][bestMEC['f_ext']]['classifiers'][clas]['alg_metrics']['f1']
 
         fixedME[clas] = {'AUC': AUC, 'PREC': PREC, 'REC': REC, 'F1': F1}
 
 
     ## Get the optimal results for all plankton species
     optimalRes = {}
+    bestF1 = 0
     bestAUC = 0
 
     # Loop through the plankton species
@@ -122,11 +158,14 @@ def main():
                 # Loop through all classifiers
                 for clas in dataPln[species]['models'][model]['f_exts'][f_ext]['classifiers']:
                     
-                    if bestAUC <= dataPln[species]['models'][model]['f_exts'][f_ext]['classifiers'][clas]['alg_metrics']['f1']:
+                    if bestF1 <= dataPln[species]['models'][model]['f_exts'][f_ext]['classifiers'][clas]['alg_metrics']['f1']:
+
+                        # Continue if the AUC is equal or higher
+                        if bestF1 == dataPln[species]['models'][model]['f_exts'][f_ext]['classifiers'][clas]['alg_metrics']['f1'] and bestAUC >= dataPln[species]['models'][model]['f_exts'][f_ext]['classifiers'][clas]['alg_metrics']['auc-roc']:
+
+                            continue
 
                         # Assign the best AUC and MEC parameters
-                        bestAUC = dataPln[species]['models'][model]['f_exts'][f_ext]['classifiers'][clas]['alg_metrics']['f1']
-
                         AUC = dataPln[species]['models'][model]['f_exts'][f_ext]['classifiers'][clas]['alg_metrics']['auc-roc']
 
                         PREC = dataPln[species]['models'][model]['f_exts'][f_ext]['classifiers'][clas]['alg_metrics']['precision']
@@ -135,8 +174,11 @@ def main():
 
                         temp = {'model': model, 'f_ext': f_ext, 'class': clas, 'AUC': AUC, 'PREC': PREC, 'REC': REC, 'F1': F1}
 
+                        bestF1 = dataPln[species]['models'][model]['f_exts'][f_ext]['classifiers'][clas]['alg_metrics']['f1']
+                        bestAUC = dataPln[species]['models'][model]['f_exts'][f_ext]['classifiers'][clas]['alg_metrics']['auc-roc']
+
         optimalRes[species] = temp
-        bestAUC = 0
+        bestF1 = 0
 
 
     ## Generate LateX tables
@@ -144,7 +186,7 @@ def main():
     # Table 1
     with open('table1.txt', 'w+') as f:
 
-        f.write('Plankton species       & AUC score & F1 score  & Prec  & Rec   \\\ \n')
+        f.write('Dataset    & AUC score & F1 score  & Prec  &   Rec   \\\ \n')
 
         for spec in speciesRes:
 
@@ -159,7 +201,7 @@ def main():
     # Table 2
     with open('table2.txt', 'w+') as f:
 
-        f.write('Model name     & AUC score & F1 score  & Prec  & Rec   \\\ \n')
+        f.write('Model name & AUC score & F1 score  & Prec  & Rec   \\\ \n')
 
         for model in fixedEC:
 
@@ -175,7 +217,7 @@ def main():
     # Table 3
     with open('table3.txt', 'w+') as f:
 
-        f.write('Feature extractor      & AUC score & F1 score  & Prec  & Rec   \\\ \n')
+        f.write('Feature extractor  & AUC score & F1 score  & Prec  & Rec   \\\ \n')
 
         for f_ext in fixedMC:
 
@@ -191,7 +233,7 @@ def main():
     # Table 4
     with open('table4.txt', 'w+') as f:
 
-        f.write('Classifier         & AUC score & F1 score  & Prec  & Rec   \\\ \n')
+        f.write('Classifier & AUC score & F1 score  & Prec  & Rec   \\\ \n')
 
         for classifier in fixedME:
 
@@ -207,7 +249,7 @@ def main():
     # Table 5
     with open('table5.txt', 'w+') as f:
 
-        f.write('Plankton species         & Model name     & Feature extractor      & Classifier         & AUC score & F1 score  & Prec  & Rec  \\\ \n')
+        f.write('Dataset    & Model name    & Feature extractor & Classifier    & AUC score & F1 score  & Prec  & Rec  \\\ \n')
 
         for species in optimalRes:
 
