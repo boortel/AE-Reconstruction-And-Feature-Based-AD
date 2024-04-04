@@ -70,7 +70,8 @@ class ModelTrainAndEval():
         else:
             try:
                 # Load the model
-                self.model = keras.models.load_model(self.modelPath)
+                #self.model = keras.models.load_model(os.path.join(self.modelPath, 'model.keras'))
+                self.model.load_weights(os.path.join(self.modelPath, 'model.weights.h5'))
             except:
                 logging.error('Desired model: ' + self.layerName + '-' + self.modelName + ' cannot be loaded...')
                 traceback.print_exc()
@@ -118,6 +119,8 @@ class ModelTrainAndEval():
                 callbacks = [self.esCallBack])
             
             #self.model.save(self.modelPath, save_format="hdf5", save_traces = True)
+            #self.model.save(os.path.join(self.modelPath, 'model.keras'))
+            self.model.save_weights(os.path.join(self.modelPath, 'model.weights.h5'))
 
         except:
             logging.error('Training of the ' + self.layerName + '-' + self.modelName + ' model failed...')
@@ -275,18 +278,20 @@ class ModelTrainAndEval():
 
         try:
             # Plot the history and save the curves
-            train_loss = self.trainHistory.history['loss']
             
             if self.typeAE == 'VAE1' or self.typeAE == 'VAE2':
+                train_loss = self.trainHistory.history['total_loss']
                 val_loss = self.trainHistory.history['kl_loss']
                 plotLabel = 'KL loss [-]'
                 tempTitle = 'Training and KL Loss of ' + self.layerName + '-' + self.modelName + '_' + self.labelInfo + ' model'
             elif self.typeAE == 'VQVAE1':
+                train_loss = self.trainHistory.history['total_loss']
                 val_loss = self.trainHistory.history['vqvae_loss']
                 plotLabel = 'VQ-VAE loss [-]'
                 tempTitle = 'Training and VQ-VAE Loss of ' + self.layerName + '-' + self.modelName + '_' + self.labelInfo + ' model'
             else:
                 val_loss = self.trainHistory.history['val_loss']
+                train_loss = self.trainHistory.history['loss']
                 plotLabel = 'Validation loss [-]'
                 tempTitle = 'Training and Validation Loss of ' + self.layerName + '-' + self.modelName + '_' + self.labelInfo + ' model'
             
