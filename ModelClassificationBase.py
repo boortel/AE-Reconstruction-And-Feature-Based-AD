@@ -28,7 +28,18 @@ from sklearn.metrics import precision_recall_curve, auc, roc_auc_score, roc_curv
 class ModelClassificationBase():
 
     ## Set the constants and paths
-    def __init__(self, modelDataPath, experimentPath, modelSel, layerSel, labelInfo, imageDim, modelData, featExtName):
+    def __init__(self,
+                 modelDataPath,
+                 experimentPath,
+                 modelSel,
+                 layerSel,
+                 labelInfo,
+                 imageDim,
+                 modelData,
+                 featExtName,
+                 anomaly_algorithm_selection = ["Robust covariance", "One-Class SVM", "Isolation Forest", "Local Outlier Factor"],
+                 visualize = True
+                ):
 
         # Set the base path
         self.layerSel = layerSel
@@ -45,6 +56,10 @@ class ModelClassificationBase():
         
         # Save the modelData variable
         self.modelData = modelData
+
+        #save anomaly algorithm selection
+        self.anomaly_algorithm_selection = anomaly_algorithm_selection
+        self.visualize = visualize
         
         logging.info('Feature extraction method: ' + self.featExtName)
         logging.info('------------------------------------------------------------------------------------------------')
@@ -83,31 +98,27 @@ class ModelClassificationBase():
     ## Get data from dictionary
     def procDataFromDict(self):
         
-        actStrs = ['Train', 'Test', 'Valid']
+        # actStrs = ['Train', 'Test', 'Valid']
         
-        for actStr in actStrs:
+        for actStr, data in self.modelData.items():
             
             self.actStr = actStr
+            # self.processedData = {'Org': self.modelData[actStr]['Org'], 'Enc': self.modelData[actStr]['Enc'], 'Dec': self.modelData[actStr]['Dec'], 'Lab': self.modelData[actStr]['Lab']}
+            self.processedData = data
 
             if self.actStr == 'Train':
-
                 # Store the data and get the metrics
-                self.processedData = {'Org': self.modelData[actStr]['Org'], 'Enc': self.modelData[actStr]['Enc'], 'Dec': self.modelData[actStr]['Dec'], 'Lab': self.modelData[actStr]['Lab']}
                 self.metricsTr, _ = self.computeMetrics(self.processedData)
 
             elif self.actStr == 'Test':
-
                 # Store the data and get the metrics
-                self.processedData = {'Org': self.modelData[actStr]['Org'], 'Enc': self.modelData[actStr]['Enc'], 'Dec': self.modelData[actStr]['Dec'], 'Lab': self.modelData[actStr]['Lab']}
                 self.metricsTs, self.labelsTs = self.computeMetrics(self.processedData)
                 
                 # Visualise the data
                 self.fsVisualise(self.metricsTs, self.labelsTs)
                 
             elif self.actStr == 'Valid':
-
                 # Store the data and get the metrics
-                self.processedData = {'Org': self.modelData[actStr]['Org'], 'Enc': self.modelData[actStr]['Enc'], 'Dec': self.modelData[actStr]['Dec'], 'Lab': self.modelData[actStr]['Lab']}
                 self.metricsVl, self.labelsVl = self.computeMetrics(self.processedData)
             
             
@@ -198,21 +209,23 @@ class ModelClassificationBase():
         
         # Compare AD detection algorithms
         outliers_fraction = 0.01
-        anomaly_algorithms = [
+        available_anomaly_algorithms = [
             ("Robust covariance", EllipticEnvelope(contamination = outliers_fraction, support_fraction = 0.9)),
             ("One-Class SVM", svm.OneClassSVM(nu = outliers_fraction, kernel = "rbf", gamma = 'scale')),
             ("Isolation Forest", IsolationForest(contamination = outliers_fraction, random_state = 42)),
             ("Local Outlier Factor", LocalOutlierFactor(n_neighbors = 15, contamination = outliers_fraction, novelty = True))]
+        anomaly_algorithms = [(name, algorithm) for name, algorithm in available_anomaly_algorithms if name in self.anomaly_algorithm_selection]
         
         # Visualise the data
-        fig, axarr = plt.subplots(2, len(anomaly_algorithms))
-        fig.set_size_inches(16, 8)
+        if self.visualize:
+            fig, axarr = plt.subplots(2, len(anomaly_algorithms))
+            fig.set_size_inches(16, 8)
 
-        tempTitle = "Classification results of the " + self.layerSel + '-' + self.modelName + '_' + self.labelInfo + " model using " + self.featExtName + " feature extraction"
-        fig.suptitle(tempTitle, fontsize=16)
-        #fig.subplots_adjust(left=0.02, right=0.98, bottom=0.001, top=0.96, wspace=0.05, hspace=0.01)
+            tempTitle = "Classification results of the " + self.layerSel + '-' + self.modelName + '_' + self.labelInfo + " model using " + self.featExtName + " feature extraction"
+            fig.suptitle(tempTitle, fontsize=16)
+            #fig.subplots_adjust(left=0.02, right=0.98, bottom=0.001, top=0.96, wspace=0.05, hspace=0.01)
 
-        plotNum = 0
+            plotNum = 0
 
         for name, algorithm in anomaly_algorithms:
 
@@ -241,14 +254,16 @@ class ModelClassificationBase():
             y_pred[nokIdx] = -1
 
             # Calculate confusion matrix
-            self.getConfusionMatrix(y_pred, name, axarr[1][plotNum])
+            if self.visualize:
+                self.getConfusionMatrix(y_pred, name, axarr[1][plotNum])
 
-            plotNum +=1
+                plotNum +=1
 
-        fig.tight_layout()
-        fig.subplots_adjust(top=0.88)
-        
-        fig.savefig(os.path.join(self.modelDataPath, self.layerSel + '-' + self.modelName  + '_' + self.labelInfo + '_' + self.featExtName + '_ClassEval_.png'))
+        if self.visualize:
+            fig.tight_layout()
+            fig.subplots_adjust(top=0.88)
+            
+            fig.savefig(os.path.join(self.modelDataPath, self.layerSel + '-' + self.modelName  + '_' + self.labelInfo + '_' + self.featExtName + '_ClassEval_.png'))
 
 
     ## Visualise the feature space

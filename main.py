@@ -126,7 +126,7 @@ def main():
                     modelDataPath = os.path.join(modelPath, 'modelData')
                     
                     # Create variable to store model data
-                    modelData = []
+                    modelData = {}
 
                     if not os.path.exists(modelDataPath):
                         os.makedirs(modelDataPath)
@@ -136,6 +136,7 @@ def main():
                         # Train and evaluate the model
                         try:
                             modelObj = ModelTrainAndEval(modelPath, model, layer, dataGenerator, labelInfo, imageDim, imIndxList, numEpoch, modelTrain, modelEval, npzSave)
+                            trainedModel = modelObj.model
                             
                             modelData = modelObj.returnProcessedData()
                         except:
@@ -146,19 +147,19 @@ def main():
                         
                     # Classify the model results 
                     
-                    #ModelClassificationEnc(modelDataPath, experimentPath, model, layer, labelInfo, imageDim, modelData)
                     
-                    ModelClassificationErrM(modelDataPath, experimentPath, model, layer, labelInfo, imageDim, modelData)
+                    classify = [
+                        #ModelClassificationEnc,
+                        ModelClassificationErrM,
+                        ModelClassificationSIFT,
+                        ModelClassificationHardNet1,
+                        ModelClassificationHardNet2,
+                        ModelClassificationHardNet3,
+                        ModelClassificationHardNet4,
+                    ]
 
-                    ModelClassificationSIFT(modelDataPath, experimentPath, model, layer, labelInfo, imageDim, modelData)
-
-                    ModelClassificationHardNet1(modelDataPath, experimentPath, model, layer, labelInfo, imageDim, modelData)
-
-                    ModelClassificationHardNet2(modelDataPath, experimentPath, model, layer, labelInfo, imageDim, modelData)
-
-                    ModelClassificationHardNet3(modelDataPath, experimentPath, model, layer, labelInfo, imageDim, modelData)
-
-                    ModelClassificationHardNet4(modelDataPath, experimentPath, model, layer, labelInfo, imageDim, modelData)
+                    for c in classify:
+                        c(modelDataPath, experimentPath, model, layer, labelInfo, imageDim, modelData)
                     
                     # Close the opened figures to spare memory
                     matplotlib.pyplot.close()
