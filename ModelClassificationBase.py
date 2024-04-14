@@ -103,7 +103,6 @@ class ModelClassificationBase():
         for actStr, data in self.modelData.items():
             
             self.actStr = actStr
-            # self.processedData = {'Org': self.modelData[actStr]['Org'], 'Enc': self.modelData[actStr]['Enc'], 'Dec': self.modelData[actStr]['Dec'], 'Lab': self.modelData[actStr]['Lab']}
             self.processedData = data
 
             if self.actStr == 'Train':
@@ -115,7 +114,8 @@ class ModelClassificationBase():
                 self.metricsTs, self.labelsTs = self.computeMetrics(self.processedData)
                 
                 # Visualise the data
-                self.fsVisualise(self.metricsTs, self.labelsTs)
+                if self.visualize:
+                    self.fsVisualise(self.metricsTs, self.labelsTs)
                 
             elif self.actStr == 'Valid':
                 # Store the data and get the metrics
@@ -138,7 +138,7 @@ class ModelClassificationBase():
 
 
     ## Calculate classification metrics
-    def getEvaluationMetrics(self, scores, name, ax):
+    def getEvaluationMetrics(self, scores, name, ax = None):
         
         # Get the ROC curve
         precision, recall, _ = precision_recall_curve(self.labelsTs, scores)
@@ -154,9 +154,10 @@ class ModelClassificationBase():
         logging.info("AUC-PRE: "   + f'{float(prc_auc):.2f}')
         
         # Plot the ROC
-        ax.plot(fpr, tpr)
-        ax.set_title(name + ', AUC: ' + f'{float(roc_auc):.2f}')
-        ax.set(xlabel = "False positive rate", ylabel = "True positive rate")
+        if ax:
+            ax.plot(fpr, tpr)
+            ax.set_title(name + ', AUC: ' + f'{float(roc_auc):.2f}')
+            ax.set(xlabel = "False positive rate", ylabel = "True positive rate")
         
         # Get and return optimal treshold using Youden’s J statistic
         #optimal_idx = np.argmax(tpr - fpr)
@@ -170,7 +171,7 @@ class ModelClassificationBase():
     
 
     ## Get the OK and NOK counts together with TPR and TNR
-    def getConfusionMatrix(self, labelsPred, name, ax):
+    def getConfusionMatrix(self, labelsPred, name, ax = None):
 
         cm = confusion_matrix(self.labelsTs, labelsPred)
         
@@ -201,7 +202,8 @@ class ModelClassificationBase():
         logging.info("Confusion matrix")
         logging.info(cm)
 
-        ConfusionMatrixDisplay.from_predictions(self.labelsTs, labelsPred, ax = ax)
+        if ax:
+            ConfusionMatrixDisplay.from_predictions(self.labelsTs, labelsPred, ax = ax)
 
 
     ## Classify the results
@@ -242,7 +244,10 @@ class ModelClassificationBase():
             
             # Get the scores from the test DS, calculate ROC evaluation metric and get optimal trsh
             tstScores = algorithm.decision_function(self.metricsTs)
-            optimal_trs = self.getEvaluationMetrics(tstScores, name, axarr[0][plotNum])
+            if self.visualize:
+                optimal_trs = self.getEvaluationMetrics(tstScores, name, axarr[0][plotNum])
+            else:
+                optimal_trs = self.getEvaluationMetrics(tstScores, name)
             
             # Fit the data and tag outliers
             y_pred = tstScores
