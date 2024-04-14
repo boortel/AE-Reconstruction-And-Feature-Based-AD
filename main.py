@@ -33,8 +33,9 @@ from ModelClassificationHardNet4 import ModelClassificationHardNet4
 def parse_args():
     parser = argparse.ArgumentParser(description = 'Train and evaluate models defined in the ini files of the init directory')
     
-    parser.add_argument('--modelTrain', default = True, type = bool, help = 'Set True for model training')
-    parser.add_argument('--modelEval', default = True, type = bool, help = 'Set True for model evaluation')
+    parser.add_argument('--modelTrain', '-t', default = True, type = bool, help = 'Set True for model training')
+    parser.add_argument('--modelEval', '-e', default = True, type = bool, help = 'Set True for model evaluation')
+    parser.add_argument('--logClear', '-l', default = True, type = bool, help = 'Set True to delete old log be fore operation')
 
     args = parser.parse_args()
 
@@ -55,12 +56,16 @@ def main():
     # Get the arg values
     modelTrain = args.modelTrain
     modelEval = args.modelEval
+    logClear = args.logClear
 
     # Initialize the config parser and the extension filter
     cfg = configparser.ConfigParser()
     ext = ('.ini')
     
     # Initialize the logging
+    if logClear:
+        os.remove('./ProgramLog.txt')
+
     logging.basicConfig(filename='./ProgramLog.txt', level=logging.INFO, format='(%(asctime)s %(levelname)-7s) %(message)s')
 
     # Loop through all ini files in the init directory
