@@ -194,7 +194,7 @@ class ModelSaved():
         # Rename the out_E layer for enc
         for i, layer in enumerate(model.layers):
             if layer.name == 'out_E':
-                layer._name = 'enc'
+                layer.name = 'enc'
         
         # Configure the model for training
         model.compile(loss = 'mean_squared_error', optimizer = optimizers.Adam()) 
