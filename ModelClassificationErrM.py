@@ -9,6 +9,7 @@ This class is used for the classification of the evaluated model
 """
 
 import logging
+from tkinter import W
 import imagehash
 import traceback
 
@@ -23,10 +24,33 @@ from ModelClassificationBase import ModelClassificationBase
 class ModelClassificationErrM(ModelClassificationBase):
 
     ## Constructor
-    def __init__(self, modelDataPath, experimentPath, modelSel, layerSel, labelInfo, imageDim, modelData):
+    def __init__(
+            self,
+            modelDataPath,
+            experimentPath,
+            modelSel,
+            layerSel,
+            labelInfo,
+            imageDim,
+            modelData,
+            anomaly_algorithm_selection = ["Robust covariance", "One-Class SVM", "Isolation Forest", "Local Outlier Factor"],
+            visualize = True
+        ):
 
         # Call the parent
-        ModelClassificationBase.__init__(self, modelDataPath, experimentPath, modelSel, layerSel, labelInfo, imageDim, modelData, 'ErrMetrics')
+        ModelClassificationBase.__init__(
+            self,
+            modelDataPath,
+            experimentPath,
+            modelSel,
+            layerSel,
+            labelInfo,
+            imageDim,
+            modelData,
+            'ErrMetrics',
+            anomaly_algorithm_selection,
+            visualize
+        )
         
         # Get data, metrics and classify the data
         try:
