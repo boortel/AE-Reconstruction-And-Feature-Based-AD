@@ -48,7 +48,8 @@ class ModelClassificationBase():
         self.modelName = modelSel
         self.modelDataPath = modelDataPath
         self.experimentPath = experimentPath
-        self.fitPath = os.path.join(modelDataPath, '..')
+        
+        self.fitPath = os.path.join(*os.path.split(modelDataPath)[:-1])
 
         # Set the constants
         self.imageDim = imageDim
@@ -241,17 +242,23 @@ class ModelClassificationBase():
         for name, algorithm in anomaly_algorithms:
 
             # Fit the model
-            if hasattr(self, 'metricsTr') and self.metricsTr is not None:
+            picklePath = os.path.join(self.fitPath, f'{name}.pickle')
+            if hasattr(self, 'metricsTr') and self.metricsTr:
                 t0 = time.time()
                 algorithm.fit(self.metricsTr)
                 t1 = time.time()
-                with open(os.path.join(self.fitPath, f'{name}.pickle')) as pickleFile:
-                    pass
-                pickle.dump
-            else:
-                pass # WTF
+                logging.info('Model fitting time: ' + f'{float(t1 - t0):.2f}' + 's')
 
-            logging.info('Model fitting time: ' + f'{float(t1 - t0):.2f}' + 's')
+                with open(picklePath, 'w') as pickleFile:
+                    pickle.dump(algorithm, pickleFile)
+            else:
+                if not os.path.exists(picklePath):
+                    raise FileNotFoundError(f'Anomaly algorithm saved fit file not found for {name}!')
+                with open(picklePath, 'r') as pickleFile:
+                    algorithm_type = algorithm.__class__
+                    algorithm = pickle.load(pickleFile)
+                    if not isinstance(algorithm, algorithm_type):
+                        raise ValueError(f'Loaded anomaly algorithm is not of the expected type! Expected {algorithm_type}, got {algorithm.__class__}')
             
             # Get the scores from the validation DS, calculate ROC evaluation metric and get optimal trsh
             #valScores = algorithm.decision_function(self.metricsVl)#.ravel()*(-1)
