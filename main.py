@@ -34,6 +34,12 @@ from ModelClassificationHardNet2 import ModelClassificationHardNet2
 from ModelClassificationHardNet3 import ModelClassificationHardNet3
 from ModelClassificationHardNet4 import ModelClassificationHardNet4
 
+import Extract_logs
+extractLogs = Extract_logs.main
+
+import ProcessLogJSON
+processLogs = ProcessLogJSON.main
+
 
 ## Parse the arguments
 def parse_args():
