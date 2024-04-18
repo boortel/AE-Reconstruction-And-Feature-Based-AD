@@ -79,6 +79,9 @@ def main():
     # Initialize the logging
     if logClear:
         os.remove('./ProgramLog.txt')
+        for file in os.listdir('./log'):
+            os.remove(os.path.join('./log', file))
+            
 
     logging.basicConfig(filename='./ProgramLog.txt', level=logging.INFO, format='(%(asctime)s %(levelname)-7s) %(message)s')
 
@@ -162,26 +165,28 @@ def main():
                         else:
                             logging.info('Model ' + model + ' was trained succesfuly...')
                         
-                    # Classify the model results 
-                    
-                    classify = [
-                        #ModelClassificationEnc,
-                        ModelClassificationErrM,
-                        ModelClassificationSIFT,
-                        ModelClassificationHardNet1,
-                        ModelClassificationHardNet2,
-                        ModelClassificationHardNet3,
-                        ModelClassificationHardNet4,
-                    ]
+                        # Classify the model results 
+                        classify = [
+                            #ModelClassificationEnc,
+                            ModelClassificationErrM,
+                            ModelClassificationSIFT,
+                            ModelClassificationHardNet1,
+                            ModelClassificationHardNet2,
+                            ModelClassificationHardNet3,
+                            #ModelClassificationHardNet4,
+                        ]
 
-                    for c in classify:
-                        c(modelDataPath, experimentPath, model, layer, labelInfo, imageDim, modelData)
+                        for c in classify:
+                            c(modelDataPath, experimentPath, model, layer, labelInfo, imageDim, modelData)
                     
                     # Close the opened figures to spare memory
                     matplotlib.pyplot.close()
 
     if modelPredict:
         
+        extractLogs()
+        processLogs()
+
         ######### Load the best combination
         aeWeightsPath = "data/Cookie_OCC/ConvM1_Cookie_OCC/BAE2/model.weights.h5"
         modelName = 'BAE2'
@@ -208,7 +213,7 @@ def main():
             'HardNet1' : ModelClassificationHardNet1,
             'HardNet2' : ModelClassificationHardNet2,
             'HardNet3' : ModelClassificationHardNet3,
-            'HardNet4' : ModelClassificationHardNet4,
+            # 'HardNet4' : ModelClassificationHardNet4,
         }[featureExtractorName]
 
         # load trained weights
