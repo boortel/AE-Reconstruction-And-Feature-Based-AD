@@ -18,6 +18,12 @@ import traceback
 import matplotlib
 import configparser
 
+import numpy as np
+from pathlib import Path
+import matplotlib.pyplot as plt
+from keras.preprocessing.image import img_to_array, load_img
+
+from ModelSaved import ModelSaved
 from ModelTrainAndEval import ModelTrainAndEval
 from ModelDataGenerators import ModelDataGenerators
 from ModelClassificationEnc import ModelClassificationEnc
@@ -33,9 +39,10 @@ from ModelClassificationHardNet4 import ModelClassificationHardNet4
 def parse_args():
     parser = argparse.ArgumentParser(description = 'Train and evaluate models defined in the ini files of the init directory')
     
-    parser.add_argument('--modelTrain', '-t', default = True, type = bool, help = 'Set True for model training')
-    parser.add_argument('--modelEval', '-e', default = True, type = bool, help = 'Set True for model evaluation')
-    parser.add_argument('--logClear', '-l', default = True, type = bool, help = 'Set True to delete old log be fore operation')
+    parser.add_argument('--modelTrain', '-t', default = False, type = bool, help = 'Set True for model training')
+    parser.add_argument('--modelEval', '-e', default = False, type = bool, help = 'Set True for model evaluation')
+    parser.add_argument('--modelPredict', '-p', default = True, type = bool, help = 'Set True for prediction')
+    parser.add_argument('--logClear', '-l', default = False, type = bool, help = 'Set True to delete old log be fore operation')
 
     args = parser.parse_args()
 
@@ -56,6 +63,7 @@ def main():
     # Get the arg values
     modelTrain = args.modelTrain
     modelEval = args.modelEval
+    modelPredict = args.modelPredict
     logClear = args.logClear
 
     # Initialize the config parser and the extension filter
@@ -92,6 +100,10 @@ def main():
             datasetPath = cfg.get('Training', 'datasetPath', fallback = 'NaN')
             batchSize = cfg.getint('Training', 'batchSize', fallback = '0')
             numEpoch = cfg.getint('Training', 'numEpoch', fallback = '0')
+
+            # Prediction
+            predictionDataPath = cfg.get('Prediction', 'predictionDataPath', fallback = '.')
+            predictionBatchSize = cfg.getint('Prediction', 'batchSize', fallback = '0')
             
             # Parse the img indeces, layers and model's names lists
             imIndxList = (imIndxList.replace(" ", "")).split(",")
@@ -136,7 +148,6 @@ def main():
                         # Train and evaluate the model
                         try:
                             modelObj = ModelTrainAndEval(modelPath, model, layer, dataGenerator, labelInfo, imageDim, imIndxList, numEpoch, modelTrain, modelEval, npzSave)
-                            trainedModel = modelObj.model
                             
                             modelData = modelObj.returnProcessedData()
                         except:
@@ -146,7 +157,6 @@ def main():
                             logging.info('Model ' + model + ' was trained succesfuly...')
                         
                     # Classify the model results 
-                    
                     
                     classify = [
                         #ModelClassificationEnc,
@@ -164,5 +174,92 @@ def main():
                     # Close the opened figures to spare memory
                     matplotlib.pyplot.close()
 
+    if modelPredict:
+        
+        ######### Load the best combination
+        aeWeightsPath = "data/Cookie_OCC/ConvM1_Cookie_OCC/BAE2/model.weights.h5"
+        modelName = 'BAE2'
+        layerName = 'ConvM1'
+        featureExtractorName = 'SIFT'
+        anomalyAlgorythmName = 'Robust covariance'
+        imageSize = (imageDim[0], imageDim[1])
+
+        # construct model
+        modelObj = ModelSaved(
+            modelName,
+            layerName,
+            imageDim,
+            dataVariance = 0.5, 
+            intermediateDim = 64,
+            latentDim = 32,
+            num_embeddings = 32
+        )
+
+        feature_extractor = {
+            # 'Enc' : ModelClassificationEnc,
+            'ErrM' : ModelClassificationErrM,
+            'SIFT' : ModelClassificationSIFT,
+            'HardNet1' : ModelClassificationHardNet1,
+            'HardNet2' : ModelClassificationHardNet2,
+            'HardNet3' : ModelClassificationHardNet3,
+            'HardNet4' : ModelClassificationHardNet4,
+        }[featureExtractorName]
+
+        # load trained weights
+        model = modelObj.model
+        model.load_weights(aeWeightsPath)
+        
+        # run and show results
+        ax_cols = 2
+        ax_rows = 4
+        fig, axs = plt.subplots(ax_rows, ax_cols * 2, figsize=(10, 10))
+        plt.ion()
+        plt.show()
+
+        # get all files
+        allowedSuffixes = [
+            '.jpg', '.jpeg',
+            '.png', '.bmp', '.gif'
+        ]
+        fileList = map(Path, os.listdir(predictionDataPath))
+        imageFileList = [file for file in fileList if file.suffix.lower() in allowedSuffixes]
+        images = []
+        for imageFile in imageFileList:
+            imagePath = Path(predictionDataPath) / imageFile
+            image = load_img(imagePath, target_size=imageSize)
+            image_array = img_to_array(image)
+            images.append(image_array)
+
+            # load images in batches
+            if len(images) >= predictionBatchSize:
+                input = np.array(images) / 255
+                images.clear()
+                output = model.predict(input)
+                
+                for c in range(ax_cols):
+                    for r in range(ax_rows):
+                        i = int(c * r / ax_cols / ax_rows * len(input))
+                        axs[r, 2 * c].imshow(input[i])
+                        axs[r, 2 * c + 1].imshow(output[i])
+
+                        axs[r, 2 * c].axis('off')
+                        axs[r, 2 * c + 1].axis('off')
+
+                plt.pause(.1)
+                plt.draw()
+
+                # Build prediction data
+                prediction_data = {
+                    'Predict':
+                    {
+                        'Org': input,
+                        'Dec': output,
+                    }
+                }
+
+                feature_extractor('', '', '', '', '', imageDim, prediction_data, [anomalyAlgorythmName], False)
+
+    return
+        
 if __name__ == '__main__':
     main()

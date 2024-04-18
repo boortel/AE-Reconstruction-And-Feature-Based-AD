@@ -9,6 +9,7 @@ This class is used for the classification of the evaluated model
 """
 
 import os
+import pickle
 import time
 import logging
 
@@ -28,24 +29,26 @@ from sklearn.metrics import precision_recall_curve, auc, roc_auc_score, roc_curv
 class ModelClassificationBase():
 
     ## Set the constants and paths
-    def __init__(self,
-                 modelDataPath,
-                 experimentPath,
-                 modelSel,
-                 layerSel,
-                 labelInfo,
-                 imageDim,
-                 modelData,
-                 featExtName,
-                 anomaly_algorithm_selection = ["Robust covariance", "One-Class SVM", "Isolation Forest", "Local Outlier Factor"],
-                 visualize = True
-                ):
+    def __init__(
+            self,
+            modelDataPath,
+            experimentPath,
+            modelSel,
+            layerSel,
+            labelInfo,
+            imageDim,
+            modelData,
+            featExtName,
+            anomaly_algorithm_selection = ["Robust covariance", "One-Class SVM", "Isolation Forest", "Local Outlier Factor"],
+            visualize = True
+        ):
 
         # Set the base path
         self.layerSel = layerSel
         self.modelName = modelSel
         self.modelDataPath = modelDataPath
         self.experimentPath = experimentPath
+        self.fitPath = os.path.join(modelDataPath, '..')
 
         # Set the constants
         self.imageDim = imageDim
@@ -60,6 +63,8 @@ class ModelClassificationBase():
         #save anomaly algorithm selection
         self.anomaly_algorithm_selection = anomaly_algorithm_selection
         self.visualize = visualize
+
+        self.predictedLabels = []
         
         logging.info('Feature extraction method: ' + self.featExtName)
         logging.info('------------------------------------------------------------------------------------------------')
@@ -120,6 +125,10 @@ class ModelClassificationBase():
             elif self.actStr == 'Valid':
                 # Store the data and get the metrics
                 self.metricsVl, self.labelsVl = self.computeMetrics(self.processedData)
+
+            elif self.actStr == 'Predict':
+                # Store the data and get the metrics
+                self.metricsPr, _ = self.computeMetrics(self.processedData)
             
             
     ## Compute the classification metrics
@@ -232,9 +241,15 @@ class ModelClassificationBase():
         for name, algorithm in anomaly_algorithms:
 
             # Fit the model
-            t0 = time.time()
-            algorithm.fit(self.metricsTr)
-            t1 = time.time()
+            if hasattr(self, 'metricsTr') and self.metricsTr:
+                t0 = time.time()
+                algorithm.fit(self.metricsTr)
+                t1 = time.time()
+                with open(os.path.join(self.fitPath, f'{name}.pickle')) as pickleFile:
+                    pass
+                pickle.dump
+            else:
+                pass # WTF
 
             logging.info('Model fitting time: ' + f'{float(t1 - t0):.2f}' + 's')
             
@@ -257,6 +272,8 @@ class ModelClassificationBase():
             
             y_pred[okIdx] = 1
             y_pred[nokIdx] = -1
+
+            self.predictedLabels = y_pred.copy()
 
             # Calculate confusion matrix
             if self.visualize:
