@@ -48,7 +48,8 @@ class ModelClassificationBase():
         self.modelName = modelSel
         self.modelDataPath = modelDataPath
         self.experimentPath = experimentPath
-        self.fitPath = os.path.join(modelDataPath, '..')
+        
+        self.fitPath = os.path.join(*os.path.split(modelDataPath)[:-1])
 
         # Set the constants
         self.imageDim = imageDim
