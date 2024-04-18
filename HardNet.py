@@ -78,7 +78,7 @@ class HardNet(object):
 
     def input_norm(self, x, eps=1e-6):
         
-        x_flatten = tf.compat.v1.layers.flatten(x)
+        x_flatten = tf.keras.layers.Flatten()(x)
         x_mu, x_std = tf.nn.moments(x=x_flatten, axes=[1])
         
         # Add extra dimension

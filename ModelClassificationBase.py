@@ -241,7 +241,7 @@ class ModelClassificationBase():
         for name, algorithm in anomaly_algorithms:
 
             # Fit the model
-            if hasattr(self, 'metricsTr') and self.metricsTr:
+            if hasattr(self, 'metricsTr') and self.metricsTr is not None:
                 t0 = time.time()
                 algorithm.fit(self.metricsTr)
                 t1 = time.time()
