@@ -265,7 +265,14 @@ class ModelClassificationBase():
             #optimal_trs = self.getEvaluationMetrics(valScores, name, axarr[0][plotNum])
             
             # Get the scores from the test DS, calculate ROC evaluation metric and get optimal trsh
-            tstScores = algorithm.decision_function(self.metricsTs)
+            if hasattr(self, 'metricsTs') and self.metricsTs is not None:
+                decisionMetrics = self.metricsTs
+            elif hasattr(self, 'metricsPr') and self.metricsPr is not None:
+                decisionMetrics = self.metricsPr
+            else:
+                raise ValueError(f'No usable metrics for decision function')
+
+            tstScores = algorithm.decision_function(decisionMetrics)
             if self.visualize:
                 optimal_trs = self.getEvaluationMetrics(tstScores, name, axarr[0][plotNum])
             else:
@@ -280,7 +287,8 @@ class ModelClassificationBase():
             y_pred[okIdx] = 1
             y_pred[nokIdx] = -1
 
-            self.predictedLabels = y_pred.copy()
+            self.predictedLabels = np.zeros_like(y_pred, dtype=bool)
+            self.predictedLabels[okIdx] = True
 
             # Calculate confusion matrix
             if self.visualize:
