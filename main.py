@@ -13,6 +13,7 @@ Please select the desired model from the module ModelSaved.py as the model argum
 import os
 import logging
 import argparse
+from typing import Dict, List, Type
 import warnings
 import traceback
 import matplotlib
@@ -23,6 +24,7 @@ from pathlib import Path
 import matplotlib.pyplot as plt
 from keras.preprocessing.image import img_to_array, load_img
 
+from ModelClassificationBase import ModelClassificationBase
 from ModelSaved import ModelSaved
 from ModelTrainAndEval import ModelTrainAndEval
 from ModelDataGenerators import ModelDataGenerators
@@ -109,6 +111,7 @@ def main():
 
             # Prediction
             predictionDataPath = cfg.get('Prediction', 'predictionDataPath', fallback = '.')
+            predictionResultPath = cfg.get('Prediction', 'predictionResultPath', fallback = '.')
             predictionBatchSize = cfg.getint('Prediction', 'batchSize', fallback = '0')
             
             # Parse the img indeces, layers and model's names lists
@@ -183,11 +186,13 @@ def main():
     if modelPredict:
         
         ######### Load the best combination
-        aeWeightsPath = "data/Cookie_OCC/ConvM1_Cookie_OCC/BAE2/model.weights.h5"
         modelName = 'BAE2'
         layerName = 'ConvM1'
         featureExtractorName = 'SIFT'
         anomalyAlgorythmName = 'Robust covariance'
+        basePath = os.path.join(experimentPath, f'{layerName}_{labelInfo}', modelName)
+        aeWeightsPath = f"{basePath}model.weights.h5"
+
         imageSize = (imageDim[0], imageDim[1])
 
         # construct model
@@ -201,7 +206,7 @@ def main():
             num_embeddings = 32
         )
 
-        feature_extractor = {
+        featureExtractor:Type[ModelClassificationBase] = {
             # 'Enc' : ModelClassificationEnc,
             'ErrM' : ModelClassificationErrM,
             'SIFT' : ModelClassificationSIFT,
@@ -230,16 +235,19 @@ def main():
         fileList = map(Path, os.listdir(predictionDataPath))
         imageFileList = [file for file in fileList if file.suffix.lower() in allowedSuffixes]
         images = []
+        imagePaths = []
         for imageFile in imageFileList:
             imagePath = Path(predictionDataPath) / imageFile
+
             image = load_img(imagePath, target_size=imageSize)
-            image_array = img_to_array(image)
-            images.append(image_array)
+            imageArray = img_to_array(image)
+
+            imagePaths.append(imagePath)
+            images.append(imageArray)
 
             # load images in batches
             if len(images) >= predictionBatchSize:
                 input = np.array(images) / 255
-                images.clear()
                 output = model.predict(input)
                 
                 for c in range(ax_cols):
@@ -263,7 +271,27 @@ def main():
                     }
                 }
 
-                feature_extractor('', '', '', '', '', imageDim, prediction_data, [anomalyAlgorythmName], False)
+                labels = featureExtractor('', basePath, '', '', '', imageDim, prediction_data, [anomalyAlgorythmName], False).predictedLabels
+
+                sorted = {imagePath: label for imagePath, label in zip(imagePaths, labels)}
+                OK = [imagePath for imagePath, label in sorted.items() if label]
+                NOK = [imagePath for imagePath, label in sorted.items() if not label]
+
+                if not os.path.exists(predictionResultPath):
+                    os.mkdir(predictionResultPath)
+
+                okPath, nokPath = [os.path.join(predictionResultPath, subfolder) for subfolder in ['OK', 'NOK']]
+                if not os.path.exists(okPath):
+                    os.mkdir(okPath)
+                if not os.path.exists(nokPath):
+                    os.mkdir(nokPath)
+                
+                for subDir, images in zip((okPath, nokPath), (OK, NOK)):
+                    for image in images:
+                        os.popen(f'cp {image} {subDir}')
+
+                imagePaths.clear()
+                images.clear()
 
     return
         
