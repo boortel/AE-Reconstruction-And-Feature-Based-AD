@@ -243,18 +243,18 @@ class ModelClassificationBase():
 
             # Fit the model
             picklePath = os.path.join(self.fitPath, f'{name}.pickle')
-            if hasattr(self, 'metricsTr') and self.metricsTr:
+            if hasattr(self, 'metricsTr') and self.metricsTr is not None:
                 t0 = time.time()
                 algorithm.fit(self.metricsTr)
                 t1 = time.time()
                 logging.info('Model fitting time: ' + f'{float(t1 - t0):.2f}' + 's')
 
-                with open(picklePath, 'w') as pickleFile:
+                with open(picklePath, 'wb') as pickleFile:
                     pickle.dump(algorithm, pickleFile)
             else:
                 if not os.path.exists(picklePath):
                     raise FileNotFoundError(f'Anomaly algorithm saved fit file not found for {name}!')
-                with open(picklePath, 'r') as pickleFile:
+                with open(picklePath, 'rb') as pickleFile:
                     algorithm_type = algorithm.__class__
                     algorithm = pickle.load(pickleFile)
                     if not isinstance(algorithm, algorithm_type):
