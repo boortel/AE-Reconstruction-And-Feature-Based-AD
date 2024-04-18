@@ -9,7 +9,6 @@ This class is used for the classification of the evaluated model
 """
 
 import logging
-from tkinter import W
 import imagehash
 import traceback
 
