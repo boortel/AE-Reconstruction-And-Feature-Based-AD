@@ -47,10 +47,10 @@ processLogs = ProcessLogJSON.main
 def parse_args():
     parser = argparse.ArgumentParser(description = 'Train and evaluate models defined in the ini files of the init directory')
     
-    parser.add_argument('--modelTrain', '-t', default = False, type = bool, help = 'Set True for model training')
-    parser.add_argument('--modelEval', '-e', default = False, type = bool, help = 'Set True for model evaluation')
+    parser.add_argument('--modelTrain', '-t', default = True, type = bool, help = 'Set True for model training')
+    parser.add_argument('--modelEval', '-e', default = True, type = bool, help = 'Set True for model evaluation')
     parser.add_argument('--modelPredict', '-p', default = True, type = bool, help = 'Set True for prediction')
-    parser.add_argument('--logClear', '-l', default = False, type = bool, help = 'Set True to delete old log be fore operation')
+    parser.add_argument('--logClear', '-l', default = True, type = bool, help = 'Set True to delete old log be fore operation')
 
     args = parser.parse_args()
 
@@ -187,8 +187,8 @@ def main():
 
     if modelPredict:
         
-        extractLogs()
-        processLogs()
+        #extractLogs()
+        #processLogs()
 
         ######### Load the best combination
         modelName = 'BAE2'
@@ -196,7 +196,7 @@ def main():
         featureExtractorName = 'SIFT'
         anomalyAlgorythmName = 'Robust covariance'
         basePath = os.path.join(experimentPath, f'{layerName}_{labelInfo}', modelName)
-        aeWeightsPath = f"{basePath}model.weights.h5"
+        aeWeightsPath = os.path.join(basePath, 'model.weights.h5')
 
         imageSize = (imageDim[0], imageDim[1])
 
@@ -273,10 +273,11 @@ def main():
                     {
                         'Org': input,
                         'Dec': output,
+                        'Lab': [None for _ in input],
                     }
                 }
 
-                labels = featureExtractor('', basePath, '', '', '', imageDim, prediction_data, [anomalyAlgorythmName], False).predictedLabels
+                labels = featureExtractor(os.path.join(basePath, 'modelData'), '', '', '', '', imageDim, prediction_data, [anomalyAlgorythmName], False).predictedLabels
 
                 sorted = {imagePath: label for imagePath, label in zip(imagePaths, labels)}
                 OK = [imagePath for imagePath, label in sorted.items() if label]
