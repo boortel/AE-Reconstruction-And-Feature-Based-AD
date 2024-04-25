@@ -242,7 +242,7 @@ class ModelClassificationBase():
         for name, algorithm in anomaly_algorithms:
 
             # Fit the model
-            picklePath = os.path.join(self.fitPath, f'{name}.pickle')
+            picklePath = os.path.join(self.fitPath, self.featExtName, f'{name}.pickle')
             if hasattr(self, 'metricsTr') and self.metricsTr is not None:
                 t0 = time.time()
                 algorithm.fit(self.metricsTr)
