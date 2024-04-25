@@ -10,6 +10,7 @@ This class is used for the classification of the evaluated model
 
 import os
 import pickle
+import yaml
 import time
 import logging
 
@@ -246,6 +247,7 @@ class ModelClassificationBase():
             pickleDirectory = os.path.dirname(picklePath)
             if not os.path.exists(pickleDirectory):
                 os.makedirs(pickleDirectory)
+            yamlPath = os.path.join(pickleDirectory, 'tresholds.yaml')
 
             # Fit the model
             if hasattr(self, 'metricsTr') and self.metricsTr is not None:
@@ -277,12 +279,31 @@ class ModelClassificationBase():
             else:
                 raise ValueError(f'No usable metrics for decision function')
 
+            # Get optimal tresholds
             tstScores = algorithm.decision_function(decisionMetrics)
-            if self.visualize:
-                optimal_trs = self.getEvaluationMetrics(tstScores, name, axarr[0][plotNum])
+            if hasattr(self, 'metricsTr') and self.metricsTr is not None:
+                if self.visualize:
+                    optimal_trs = self.getEvaluationMetrics(tstScores, name, axarr[0][plotNum])
+                else:
+                    optimal_trs = self.getEvaluationMetrics(tstScores, name)
+                
+                tresholds = {}
+                if os.path.exists(yamlPath):
+                    with open(yamlPath, 'r') as trsFile:
+                        tresholds = yaml.safe_load(trsFile)
+
+                tresholds.update({name: f'{optimal_trs}'})
+                with open(yamlPath, 'w') as trsFile:
+                    yaml.safe_dump(tresholds, trsFile)   
             else:
-                optimal_trs = self.getEvaluationMetrics(tstScores, name)
-            
+                if not os.path.exists(yamlPath):
+                    raise ValueError(f'Unable to load {yamlPath}')
+                with open(yamlPath, 'r') as trsFile:
+                    tresholds = yaml.safe_load(trsFile)
+                    optimal_trs = np.float64(tresholds[name])
+                    if optimal_trs is None:
+                        raise ValueError(f'Unable to read treshold from {yamlPath}')
+
             # Fit the data and tag outliers
             y_pred = tstScores
             

@@ -192,7 +192,7 @@ def main():
         #processLogs()
 
         ######### Load the best combination
-        modelName = 'BAE2'
+        modelName = 'BAE1'
         layerName = 'ConvM1'
         featureExtractorName = 'SIFT'
         anomalyAlgorythmName = 'Robust covariance'
