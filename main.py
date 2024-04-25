@@ -80,7 +80,8 @@ def main():
     
     # Initialize the logging
     if logClear:
-        os.remove('./ProgramLog.txt')
+        if os.path.exists('./ProgramLog.txt'):
+            os.remove('./ProgramLog.txt')
         for file in os.listdir('./log'):
             os.remove(os.path.join('./log', file))
             
@@ -241,6 +242,7 @@ def main():
         imageFileList = [file for file in fileList if file.suffix.lower() in allowedSuffixes]
         images = []
         imagePaths = []
+        batchCount = 0
         for imageFile in imageFileList:
             imagePath = Path(predictionDataPath) / imageFile
 
@@ -250,8 +252,10 @@ def main():
             imagePaths.append(imagePath)
             images.append(imageArray)
 
-            # load images in batches
-            if len(images) >= predictionBatchSize:
+            # load images in batches (if the amount of loaded images is big enough for a batch,
+            # or if the number ofremaining images is less than the size of a batch and all of them are loaded
+            if len(images) >= predictionBatchSize or len(images) == len(imageFileList) - (predictionBatchSize * batchCount):
+                batchCount += 1
                 input = np.array(images) / 255
                 output = model.predict(input)
                 
