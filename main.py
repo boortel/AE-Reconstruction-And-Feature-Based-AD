@@ -50,7 +50,7 @@ def parse_args():
     parser.add_argument('--modelTrain', '-t', default = True, type = bool, help = 'Set True for model training')
     parser.add_argument('--modelEval', '-e', default = True, type = bool, help = 'Set True for model evaluation')
     parser.add_argument('--modelPredict', '-p', default = True, type = bool, help = 'Set True for prediction')
-    parser.add_argument('--logClear', '-l', default = True, type = bool, help = 'Set True to delete old log be fore operation')
+    parser.add_argument('--logClear', '-l', default = False, type = bool, help = 'Set True to delete old log be fore operation')
 
     args = parser.parse_args()
 
@@ -188,8 +188,8 @@ def main():
 
     if modelPredict:
         
-        #extractLogs()
-        #processLogs()
+        extractLogs()
+        processLogs()
 
         ######### Load the best combination
         modelName = 'BAE1'
