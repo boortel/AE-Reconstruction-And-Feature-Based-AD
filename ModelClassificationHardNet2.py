@@ -23,11 +23,34 @@ from ModelClassificationBase import ModelClassificationBase
 class ModelClassificationHardNet2(ModelClassificationBase):
 
     ## Constructor
-    def __init__(self, modelDataPath, experimentPath, modelSel, layerSel, labelInfo, imageDim, modelData):
+    def __init__(
+            self,
+            modelDataPath,
+            experimentPath,
+            modelSel,
+            layerSel,
+            labelInfo,
+            imageDim,
+            modelData,
+            anomaly_algorithm_selection = ["Robust covariance", "One-Class SVM", "Isolation Forest", "Local Outlier Factor"],
+            visualize = True
+        ):
         
         try:
             # Call the parent
-            ModelClassificationBase.__init__(self, modelDataPath, experimentPath, modelSel, layerSel, labelInfo, imageDim, modelData, 'HardNet2')
+            ModelClassificationBase.__init__(
+                self,
+                modelDataPath,
+                experimentPath, 
+                modelSel,
+                layerSel,
+                labelInfo,
+                imageDim,
+                modelData,
+                'HardNet2',
+                anomaly_algorithm_selection,
+                visualize
+            )
         except:
             traceback.print_exc()
         

@@ -22,13 +22,36 @@ from ModelClassificationBase import ModelClassificationBase
 class ModelClassificationHardNet1(ModelClassificationBase):
 
     ## Constructor
-    def __init__(self, modelDataPath, experimentPath, modelSel, layerSel, labelInfo, imageDim, modelData):
+    def __init__(
+            self,
+            modelDataPath,
+            experimentPath,
+            modelSel,
+            layerSel,
+            labelInfo,
+            imageDim,
+            modelData,
+            anomaly_algorithm_selection = ["Robust covariance", "One-Class SVM", "Isolation Forest", "Local Outlier Factor"],
+            visualize = True
+        ):
         
         # Disable tf2 behavior for tf1
         #tf1.disable_v2_behavior()
 
         # Call the parent
-        ModelClassificationBase.__init__(self, modelDataPath, experimentPath, modelSel, layerSel, labelInfo, imageDim, modelData, 'HardNet1')
+        ModelClassificationBase.__init__(
+            self,
+            modelDataPath,
+            experimentPath, 
+            modelSel,
+            layerSel,
+            labelInfo,
+            imageDim,
+            modelData,
+            'HardNet1',
+            anomaly_algorithm_selection,
+            visualize
+        )
         
         # Create HardNet model object
         self.hardNet = HardNet()
