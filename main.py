@@ -19,6 +19,7 @@ import traceback
 import matplotlib
 import configparser
 
+import yaml
 import numpy as np
 from pathlib import Path
 import matplotlib.pyplot as plt
@@ -47,8 +48,8 @@ processLogs = ProcessLogJSON.main
 def parse_args():
     parser = argparse.ArgumentParser(description = 'Train and evaluate models defined in the ini files of the init directory')
     
-    parser.add_argument('--modelTrain', '-t', default = True, type = bool, help = 'Set True for model training')
-    parser.add_argument('--modelEval', '-e', default = True, type = bool, help = 'Set True for model evaluation')
+    parser.add_argument('--modelTrain', '-t', default = False, type = bool, help = 'Set True for model training')
+    parser.add_argument('--modelEval', '-e', default = False, type = bool, help = 'Set True for model evaluation')
     parser.add_argument('--modelPredict', '-p', default = True, type = bool, help = 'Set True for prediction')
     parser.add_argument('--logClear', '-l', default = False, type = bool, help = 'Set True to delete old log be fore operation')
 
@@ -188,14 +189,14 @@ def main():
 
     if modelPredict:
         
-        extractLogs()
-        processLogs()
+        # extractLogs()
+        # processLogs()
 
         ######### Load the best combination
-        modelName = 'BAE1'
+        modelName = 'BAE2'
         layerName = 'ConvM1'
-        featureExtractorName = 'SIFT'
-        anomalyAlgorythmName = 'Robust covariance'
+        featureExtractorName = 'HardNet1'
+        anomalyAlgorythmName = 'Local Outlier Factor'
         basePath = os.path.join(experimentPath, f'{layerName}_{labelInfo}', modelName)
         aeWeightsPath = os.path.join(basePath, 'model.weights.h5')
 
@@ -299,6 +300,20 @@ def main():
                 for subDir, images in zip((okPath, nokPath), (OK, NOK)):
                     for image in images:
                         os.popen(f'cp {image} {subDir}')
+
+                labelsPath = os.path.join(predictionResultPath, 'labels.yaml')
+                labels = {}
+                if os.path.exists(labelsPath):
+                    with open(labelsPath, 'r') as labelsFile:
+                        labels = yaml.safe_load(labelsFile)
+
+                labels.update({
+                    'OK': OK,
+                    'NOK': NOK
+                })
+
+                with open(labelsPath, 'w') as labelsFile:
+                    yaml.safe_dump(labels, labelsFile)
 
                 imagePaths.clear()
                 images.clear()
