@@ -302,14 +302,16 @@ def main():
                         os.popen(f'cp {image} {subDir}')
 
                 labelsPath = os.path.join(predictionResultPath, 'labels.yaml')
-                labels = {}
+                labels = None
                 if os.path.exists(labelsPath):
                     with open(labelsPath, 'r') as labelsFile:
                         labels = yaml.safe_load(labelsFile)
+                if labels is None:
+                    labels = {}
 
                 labels.update({
-                    'OK': OK,
-                    'NOK': NOK
+                    'OK': [f'{os.path.abspath(ok)}' for ok in OK],
+                    'NOK': [f'{os.path.abspath(nok)}' for nok in NOK]
                 })
 
                 with open(labelsPath, 'w') as labelsFile:
