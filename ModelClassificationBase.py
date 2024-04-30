@@ -9,6 +9,8 @@ This class is used for the classification of the evaluated model
 """
 
 import os
+import pickle
+import yaml
 import time
 import logging
 
@@ -28,13 +30,27 @@ from sklearn.metrics import precision_recall_curve, auc, roc_auc_score, roc_curv
 class ModelClassificationBase():
 
     ## Set the constants and paths
-    def __init__(self, modelDataPath, experimentPath, modelSel, layerSel, labelInfo, imageDim, modelData, featExtName):
+    def __init__(
+            self,
+            modelDataPath,
+            experimentPath,
+            modelSel,
+            layerSel,
+            labelInfo,
+            imageDim,
+            modelData,
+            featExtName,
+            anomaly_algorithm_selection = ["Robust covariance", "One-Class SVM", "Isolation Forest", "Local Outlier Factor"],
+            visualize = True
+        ):
 
         # Set the base path
         self.layerSel = layerSel
         self.modelName = modelSel
         self.modelDataPath = modelDataPath
         self.experimentPath = experimentPath
+        
+        self.fitPath = os.path.join(*os.path.split(modelDataPath)[:-1])
 
         # Set the constants
         self.imageDim = imageDim
@@ -45,6 +61,12 @@ class ModelClassificationBase():
         
         # Save the modelData variable
         self.modelData = modelData
+
+        #save anomaly algorithm selection
+        self.anomaly_algorithm_selection = anomaly_algorithm_selection
+        self.visualize = visualize
+
+        self.predictedLabels = []
         
         logging.info('Feature extraction method: ' + self.featExtName)
         logging.info('------------------------------------------------------------------------------------------------')
@@ -83,32 +105,32 @@ class ModelClassificationBase():
     ## Get data from dictionary
     def procDataFromDict(self):
         
-        actStrs = ['Train', 'Test', 'Valid']
+        # actStrs = ['Train', 'Test', 'Valid']
         
-        for actStr in actStrs:
+        for actStr, data in self.modelData.items():
             
             self.actStr = actStr
+            self.processedData = data
 
             if self.actStr == 'Train':
-
                 # Store the data and get the metrics
-                self.processedData = {'Org': self.modelData[actStr]['Org'], 'Enc': self.modelData[actStr]['Enc'], 'Dec': self.modelData[actStr]['Dec'], 'Lab': self.modelData[actStr]['Lab']}
                 self.metricsTr, _ = self.computeMetrics(self.processedData)
 
             elif self.actStr == 'Test':
-
                 # Store the data and get the metrics
-                self.processedData = {'Org': self.modelData[actStr]['Org'], 'Enc': self.modelData[actStr]['Enc'], 'Dec': self.modelData[actStr]['Dec'], 'Lab': self.modelData[actStr]['Lab']}
                 self.metricsTs, self.labelsTs = self.computeMetrics(self.processedData)
                 
                 # Visualise the data
-                self.fsVisualise(self.metricsTs, self.labelsTs)
+                if self.visualize:
+                    self.fsVisualise(self.metricsTs, self.labelsTs)
                 
             elif self.actStr == 'Valid':
-
                 # Store the data and get the metrics
-                self.processedData = {'Org': self.modelData[actStr]['Org'], 'Enc': self.modelData[actStr]['Enc'], 'Dec': self.modelData[actStr]['Dec'], 'Lab': self.modelData[actStr]['Lab']}
                 self.metricsVl, self.labelsVl = self.computeMetrics(self.processedData)
+
+            elif self.actStr == 'Predict':
+                # Store the data and get the metrics
+                self.metricsPr, _ = self.computeMetrics(self.processedData)
             
             
     ## Compute the classification metrics
@@ -127,7 +149,7 @@ class ModelClassificationBase():
 
 
     ## Calculate classification metrics
-    def getEvaluationMetrics(self, scores, name, ax):
+    def getEvaluationMetrics(self, scores, name, ax = None):
         
         # Get the ROC curve
         precision, recall, _ = precision_recall_curve(self.labelsTs, scores)
@@ -143,9 +165,10 @@ class ModelClassificationBase():
         logging.info("AUC-PRE: "   + f'{float(prc_auc):.2f}')
         
         # Plot the ROC
-        ax.plot(fpr, tpr)
-        ax.set_title(name + ', AUC: ' + f'{float(roc_auc):.2f}')
-        ax.set(xlabel = "False positive rate", ylabel = "True positive rate")
+        if ax:
+            ax.plot(fpr, tpr)
+            ax.set_title(name + ', AUC: ' + f'{float(roc_auc):.2f}')
+            ax.set(xlabel = "False positive rate", ylabel = "True positive rate")
         
         # Get and return optimal treshold using Youden’s J statistic
         #optimal_idx = np.argmax(tpr - fpr)
@@ -159,7 +182,7 @@ class ModelClassificationBase():
     
 
     ## Get the OK and NOK counts together with TPR and TNR
-    def getConfusionMatrix(self, labelsPred, name, ax):
+    def getConfusionMatrix(self, labelsPred, name, ax = None):
 
         cm = confusion_matrix(self.labelsTs, labelsPred)
         
@@ -190,7 +213,8 @@ class ModelClassificationBase():
         logging.info("Confusion matrix")
         logging.info(cm)
 
-        ConfusionMatrixDisplay.from_predictions(self.labelsTs, labelsPred, ax = ax)
+        if ax:
+            ConfusionMatrixDisplay.from_predictions(self.labelsTs, labelsPred, ax = ax)
 
 
     ## Classify the results
@@ -198,39 +222,88 @@ class ModelClassificationBase():
         
         # Compare AD detection algorithms
         outliers_fraction = 0.01
-        anomaly_algorithms = [
+        available_anomaly_algorithms = [
             ("Robust covariance", EllipticEnvelope(contamination = outliers_fraction, support_fraction = 0.9)),
             ("One-Class SVM", svm.OneClassSVM(nu = outliers_fraction, kernel = "rbf", gamma = 'scale')),
             ("Isolation Forest", IsolationForest(contamination = outliers_fraction, random_state = 42)),
             ("Local Outlier Factor", LocalOutlierFactor(n_neighbors = 15, contamination = outliers_fraction, novelty = True))]
+        anomaly_algorithms = [(name, algorithm) for name, algorithm in available_anomaly_algorithms if name in self.anomaly_algorithm_selection]
         
         # Visualise the data
-        fig, axarr = plt.subplots(2, len(anomaly_algorithms))
-        fig.set_size_inches(16, 8)
+        if self.visualize:
+            fig, axarr = plt.subplots(2, len(anomaly_algorithms))
+            fig.set_size_inches(16, 8)
 
-        tempTitle = "Classification results of the " + self.layerSel + '-' + self.modelName + '_' + self.labelInfo + " model using " + self.featExtName + " feature extraction"
-        fig.suptitle(tempTitle, fontsize=16)
-        #fig.subplots_adjust(left=0.02, right=0.98, bottom=0.001, top=0.96, wspace=0.05, hspace=0.01)
+            tempTitle = "Classification results of the " + self.layerSel + '-' + self.modelName + '_' + self.labelInfo + " model using " + self.featExtName + " feature extraction"
+            fig.suptitle(tempTitle, fontsize=16)
+            #fig.subplots_adjust(left=0.02, right=0.98, bottom=0.001, top=0.96, wspace=0.05, hspace=0.01)
 
-        plotNum = 0
+            plotNum = 0
 
         for name, algorithm in anomaly_algorithms:
 
-            # Fit the model
-            t0 = time.time()
-            algorithm.fit(self.metricsTr)
-            t1 = time.time()
+            # prepare save directory and file for the fit model
+            picklePath = os.path.join(self.fitPath, self.featExtName, f'{name}.pickle')
+            pickleDirectory = os.path.dirname(picklePath)
+            if not os.path.exists(pickleDirectory):
+                os.makedirs(pickleDirectory)
+            yamlPath = os.path.join(pickleDirectory, 'tresholds.yaml')
 
-            logging.info('Model fitting time: ' + f'{float(t1 - t0):.2f}' + 's')
+            # Fit the model
+            if hasattr(self, 'metricsTr') and self.metricsTr is not None:
+                t0 = time.time()
+                algorithm.fit(self.metricsTr)
+                t1 = time.time()
+                logging.info('Model fitting time: ' + f'{float(t1 - t0):.2f}' + 's')
+
+                with open(picklePath, 'wb') as pickleFile:
+                    pickle.dump(algorithm, pickleFile)
+            else:
+                if not os.path.exists(picklePath):
+                    raise FileNotFoundError(f'Anomaly algorithm saved fit file not found for {name}!')
+                with open(picklePath, 'rb') as pickleFile:
+                    algorithm_type = algorithm.__class__
+                    algorithm = pickle.load(pickleFile)
+                    if not isinstance(algorithm, algorithm_type):
+                        raise ValueError(f'Loaded anomaly algorithm is not of the expected type! Expected {algorithm_type}, got {algorithm.__class__}')
             
             # Get the scores from the validation DS, calculate ROC evaluation metric and get optimal trsh
             #valScores = algorithm.decision_function(self.metricsVl)#.ravel()*(-1)
             #optimal_trs = self.getEvaluationMetrics(valScores, name, axarr[0][plotNum])
             
             # Get the scores from the test DS, calculate ROC evaluation metric and get optimal trsh
-            tstScores = algorithm.decision_function(self.metricsTs)
-            optimal_trs = self.getEvaluationMetrics(tstScores, name, axarr[0][plotNum])
-            
+            if hasattr(self, 'metricsTs') and self.metricsTs is not None:
+                decisionMetrics = self.metricsTs
+            elif hasattr(self, 'metricsPr') and self.metricsPr is not None:
+                decisionMetrics = self.metricsPr
+            else:
+                raise ValueError(f'No usable metrics for decision function')
+
+            # Get optimal tresholds
+            tstScores = algorithm.decision_function(decisionMetrics)
+            if hasattr(self, 'metricsTr') and self.metricsTr is not None:
+                if self.visualize:
+                    optimal_trs = self.getEvaluationMetrics(tstScores, name, axarr[0][plotNum])
+                else:
+                    optimal_trs = self.getEvaluationMetrics(tstScores, name)
+                
+                tresholds = {}
+                if os.path.exists(yamlPath):
+                    with open(yamlPath, 'r') as trsFile:
+                        tresholds = yaml.safe_load(trsFile)
+
+                tresholds.update({name: f'{optimal_trs}'})
+                with open(yamlPath, 'w') as trsFile:
+                    yaml.safe_dump(tresholds, trsFile)   
+            else:
+                if not os.path.exists(yamlPath):
+                    raise ValueError(f'Unable to load {yamlPath}')
+                with open(yamlPath, 'r') as trsFile:
+                    tresholds = yaml.safe_load(trsFile)
+                    optimal_trs = np.float64(tresholds[name])
+                    if optimal_trs is None:
+                        raise ValueError(f'Unable to read treshold from {yamlPath}')
+
             # Fit the data and tag outliers
             y_pred = tstScores
             
@@ -240,15 +313,20 @@ class ModelClassificationBase():
             y_pred[okIdx] = 1
             y_pred[nokIdx] = -1
 
+            self.predictedLabels = np.zeros_like(y_pred, dtype=bool)
+            self.predictedLabels[okIdx] = True
+
             # Calculate confusion matrix
-            self.getConfusionMatrix(y_pred, name, axarr[1][plotNum])
+            if self.visualize:
+                self.getConfusionMatrix(y_pred, name, axarr[1][plotNum])
 
-            plotNum +=1
+                plotNum +=1
 
-        fig.tight_layout()
-        fig.subplots_adjust(top=0.88)
-        
-        fig.savefig(os.path.join(self.modelDataPath, self.layerSel + '-' + self.modelName  + '_' + self.labelInfo + '_' + self.featExtName + '_ClassEval_.png'))
+        if self.visualize:
+            fig.tight_layout()
+            fig.subplots_adjust(top=0.88)
+            
+            fig.savefig(os.path.join(self.modelDataPath, self.layerSel + '-' + self.modelName  + '_' + self.labelInfo + '_' + self.featExtName + '_ClassEval_.png'))
 
 
     ## Visualise the feature space

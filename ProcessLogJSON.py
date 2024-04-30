@@ -4,12 +4,12 @@ import json
 def main():
 
     # Open JSON files as dictionary
-    f = open('parsed-all-log_CookieLot.json')
+    f = open('log/parsed-all-log_CookieLot.json')
     dataAll = json.load(f)
 
     Datasets = dataAll['Cookie_OCC']
 
-    f = open('parsed-all-log_CookieLot.json')
+    f = open('log/parsed-all-log_CookieLot.json')
     dataPln = json.load(f)
 
 
@@ -184,7 +184,7 @@ def main():
     ## Generate LateX tables
 
     # Table 1
-    with open('table1.txt', 'w+') as f:
+    with open('log/table1.txt', 'w+') as f:
 
         f.write('Dataset    & AUC score & F1 score  & Prec  &   Rec   \\\ \n')
 
@@ -199,7 +199,7 @@ def main():
             f.write(spec + '\t\t\t& ' + f'{float(AUC):.2f}' + '\t\t\t& ' + f'{float(F1):.2f}' + '\t& ' + f'{float(PREC):.2f}' + '\t& ' + f'{float(REC):.2f}' + '    \\\ \n')
 
     # Table 2
-    with open('table2.txt', 'w+') as f:
+    with open('log/table2.txt', 'w+') as f:
 
         f.write('Model name & AUC score & F1 score  & Prec  & Rec   \\\ \n')
 
@@ -215,7 +215,7 @@ def main():
         
 
     # Table 3
-    with open('table3.txt', 'w+') as f:
+    with open('log/table3.txt', 'w+') as f:
 
         f.write('Feature extractor  & AUC score & F1 score  & Prec  & Rec   \\\ \n')
 
@@ -231,7 +231,7 @@ def main():
         
 
     # Table 4
-    with open('table4.txt', 'w+') as f:
+    with open('log/table4.txt', 'w+') as f:
 
         f.write('Classifier & AUC score & F1 score  & Prec  & Rec   \\\ \n')
 
@@ -247,7 +247,7 @@ def main():
         
 
     # Table 5
-    with open('table5.txt', 'w+') as f:
+    with open('log/table5.txt', 'w+') as f:
 
         f.write('Dataset    & Model name    & Feature extractor & Classifier    & AUC score & F1 score  & Prec  & Rec  \\\ \n')
 
