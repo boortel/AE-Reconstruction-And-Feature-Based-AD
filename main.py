@@ -309,10 +309,14 @@ def main():
                 if labels is None:
                     labels = {}
 
-                labels.update({
-                    'OK': [f'{os.path.abspath(ok)}' for ok in OK],
-                    'NOK': [f'{os.path.abspath(nok)}' for nok in NOK]
-                })
+                for label, results in zip(('OK', 'NOK'), (OK, NOK)):
+                    existing = labels.get(label)
+                    thisBatch = [f'{os.path.abspath(r)}' for r in results]
+                    if isinstance(existing, list):
+                        existing.extend(thisBatch)
+                    else:
+                        existing = thisBatch
+                    labels[label] = existing
 
                 with open(labelsPath, 'w') as labelsFile:
                     yaml.safe_dump(labels, labelsFile)
