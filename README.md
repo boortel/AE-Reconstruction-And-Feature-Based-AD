@@ -20,18 +20,32 @@ Please cite following paper in your further work:
 
 ```
 @inproceedings{BUT171163,
-  author="Šimon {Bilík}",
-  title="Feature space reduction as data preprocessing for the anomaly detection",
-  address="Brno University of Technology, Faculty of Electrical Engineering",
-  booktitle="Proceedings I of the 27th Conference STUDENT EEICT 2021",
-  chapter="171163",
-  howpublished="online",
-  institution="Brno University of Technology, Faculty of Electrical Engineering",
-  year="2021",
-  month="april",
-  pages="415--419",
-  publisher="Brno University of Technology, Faculty of Electrical Engineering",
-  type="conference paper"
+    @Article{Bilik2023,
+    author={Bilik, Simon
+    and Batrakhanov, Daniel
+    and Eerola, Tuomas
+    and Haraguchi, Lumi
+    and Kraft, Kaisa
+    and Van den Wyngaert, Silke
+    and Kangas, Jonna
+    and Sj{\"o}qvist, Conny
+    and Madsen, Karin
+    and Lensu, Lasse
+    and K{\"a}lvi{\"a}inen, Heikki
+    and Horak, Karel},
+    title={Toward phytoplankton parasite detection using autoencoders},
+    journal={Machine Vision and Applications},
+    year={2023},
+    month={Sep},
+    day={13},
+    volume={34},
+    number={6},
+    pages={101},
+    issn={1432-1769},
+    doi={10.1007/s00138-023-01450-x},
+    url={https://doi.org/10.1007/s00138-023-01450-x}
+}
+
 }
 ```
 
