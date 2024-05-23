@@ -2,7 +2,7 @@
 
 **Framework for the AE reconstruction and feature based anomaly detection**
 
-## What is this repository and how does the proposed anomaly detection works?
+## How does the proposed anomaly detection works?
 
 This repository implements the reconstruction-based anomaly detection method presented in the article [*Toward phytoplankton parasite detection using autoencoders*]([https://link.springer.com/article/10.1007/s00138-023-01450-x]). The proposed technique utilizes an autoencoder trained on the non-anomalous (OK) data, which is later used to reconstruct dataset containing both OK and anomalous (NOK) data. Various features are extracted using a comparison between the original and reconstructed data, which are classified under an assumption, that the difference will be more significant in case of the NOK data. The scheme is shown in the figure bellow:
 
