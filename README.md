@@ -4,7 +4,7 @@
 
 ## How does the proposed anomaly detection works?
 
-This repository implements the reconstruction-based anomaly detection method presented in the article [*Toward phytoplankton parasite detection using autoencoders*]([https://link.springer.com/article/10.1007/s00138-023-01450-x]). The proposed technique utilizes an autoencoder trained on the non-anomalous (OK) data, which is later used to reconstruct dataset containing both OK and anomalous (NOK) data. Various features are extracted using a comparison between the original and reconstructed data, which are classified under an assumption, that the difference will be more significant in case of the NOK data. The scheme is shown in the figure bellow:
+This repository implements the reconstruction-based anomaly detection method presented in the article [*Toward phytoplankton parasite detection using autoencoders*](https://link.springer.com/article/10.1007/s00138-023-01450-x). The proposed technique utilizes an autoencoder trained on the non-anomalous (OK) data, which is later used to reconstruct dataset containing both OK and anomalous (NOK) data. Various features are extracted using a comparison between the original and reconstructed data, which are classified under an assumption, that the difference will be more significant in case of the NOK data. The scheme is shown in the figure bellow:
 
 ![Reconstruction framework scheme](https://github.com/boortel/AE-Reconstruction-And-Feature-Based-AD/assets/33236294/c4955068-3825-469a-a177-fa949e33bd4c)
 
@@ -19,9 +19,9 @@ The framework implements five autoencoders cores and six convolutional encoder-d
 
 - Basic core 1 (BAE1): a direct connection of the encoder-decoder pair.
 - Basic core 2 (BAE2): a basic scheme with the inserted fully-connected layers.
-- Variational core 1 (VAE1): a basic variational autoencoder derived from [Keras Example]([https://keras.io/examples/generative/vae/]).
+- Variational core 1 (VAE1): a basic variational autoencoder derived from [Keras Example](https://keras.io/examples/generative/vae/).
 - Variational core 2 (VAE2): VAE1 scheme with the inseted fully-connected layers.
-- Vector-quantised core (VQVAE1): vector-quantised autoencoder derived from [Keras Example]([https://keras.io/examples/generative/vq_vae/]).
+- Vector-quantised core (VQVAE1): vector-quantised autoencoder derived from [Keras Example](https://keras.io/examples/generative/vq_vae/).
 
 Modifications of the BAE2 and VAE2 cores are illustrated on the figure bellow:
 
@@ -42,8 +42,8 @@ Modifications of the BAE2 and VAE2 cores are illustrated on the figure bellow:
 
 This repository is still under development and it is based the research presented in the following repositories:
 
-- [CAE-VAE-AD-Preprocessing]([https://github.com/boortel/CAE-VAE-AD-Preprocessing])
-- [SIFT-and-SURF-based-AD]([https://github.com/boortel/SIFT-and-SURF-based-AD])
+- [CAE-VAE-AD-Preprocessing](https://github.com/boortel/CAE-VAE-AD-Preprocessing)
+- [SIFT-and-SURF-based-AD](https://github.com/boortel/SIFT-and-SURF-based-AD)
 
 ## References
 
