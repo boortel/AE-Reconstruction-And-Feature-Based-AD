@@ -13,7 +13,7 @@ Please select the desired model from the module ModelSaved.py as the model argum
 import os
 import logging
 import argparse
-from typing import Dict, List, Type
+
 import warnings
 import traceback
 import matplotlib
@@ -21,9 +21,11 @@ import configparser
 
 import yaml
 import numpy as np
-from pathlib import Path
 import matplotlib.pyplot as plt
-from keras.preprocessing.image import img_to_array, load_img
+
+from typing import Dict, List, Type
+from pathlib import Path
+from keras_preprocessing.image import img_to_array, load_img
 
 from ModelClassificationBase import ModelClassificationBase
 from ModelSaved import ModelSaved
@@ -48,9 +50,9 @@ processLogs = ProcessLogJSON.main
 def parse_args():
     parser = argparse.ArgumentParser(description = 'Train and evaluate models defined in the ini files of the init directory')
     
-    parser.add_argument('--modelTrain', '-t', default = False, type = bool, help = 'Set True for model training')
-    parser.add_argument('--modelEval', '-e', default = False, type = bool, help = 'Set True for model evaluation')
-    parser.add_argument('--modelPredict', '-p', default = True, type = bool, help = 'Set True for prediction')
+    parser.add_argument('--modelTrain', '-t', default = True, type = bool, help = 'Set True for model training')
+    parser.add_argument('--modelEval', '-e', default = True, type = bool, help = 'Set True for model evaluation')
+    parser.add_argument('--modelPredict', '-p', default = False, type = bool, help = 'Set True for prediction')
     parser.add_argument('--logClear', '-l', default = False, type = bool, help = 'Set True to delete old log be fore operation')
 
     args = parser.parse_args()
@@ -83,6 +85,7 @@ def main():
     if logClear:
         if os.path.exists('./ProgramLog.txt'):
             os.remove('./ProgramLog.txt')
+
         for file in os.listdir('./log'):
             os.remove(os.path.join('./log', file))
             
@@ -244,6 +247,7 @@ def main():
         images = []
         imagePaths = []
         batchCount = 0
+
         for imageFile in imageFileList:
             imagePath = Path(predictionDataPath) / imageFile
 
