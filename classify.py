@@ -1,11 +1,12 @@
 import os
-import argparse
-from pathlib import Path
 import time
+import argparse
+
 import numpy as np
 import matplotlib.pyplot as plt
-from keras.preprocessing.image import img_to_array, load_img
-# from tensorflow.keras.utils.image_dataset_from_directory(
+
+from pathlib import Path
+from keras_preprocessing.image import img_to_array, load_img
 
 from ModelSaved import ModelSaved
 

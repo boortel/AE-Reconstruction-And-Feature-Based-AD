@@ -189,7 +189,7 @@ class VQVAETrainer(Model):
 
         # Log results
         return {
-            "loss": self.total_loss_tracker.result(),
+            "total_loss": self.total_loss_tracker.result(),
             "reconstruction_loss": self.reconstruction_loss_tracker.result(),
             "vqvae_loss": self.vq_loss_tracker.result(),
         }
