@@ -188,7 +188,7 @@ def main():
                             c(modelDataPath, experimentPath, model, layer, labelInfo, imageDim, modelData)
                     
                     # Close the opened figures to spare memory
-                    matplotlib.pyplot.close()
+                    matplotlib.pyplot.close('all')
 
     if modelPredict:
         
