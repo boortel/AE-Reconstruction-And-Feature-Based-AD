@@ -33,7 +33,7 @@ AUTOTUNE = tf.data.experimental.AUTOTUNE
 class ModelTrainAndEval():
 
     ## Set the constants and paths
-    def __init__(self, modelPath, model, layer, dataGenerator, labelInfo, imageDim, imIndxList, numEpoch, trainFlag, evalFlag, npzSave):
+    def __init__(self, modelPath, model, layer, dataGenerator, labelInfo, imageDim, imIndxList, numEpoch, evalFlag, npzSave):
 
         # Set model and training parameters
         self.labelInfo = labelInfo
@@ -63,19 +63,9 @@ class ModelTrainAndEval():
         logging.info("Autoencoder architecture name: " + self.layerName + '-' + self.modelName  + '_' + self.labelInfo)
         logging.info('')
 
-        if trainFlag:
-            # Set callbacks, train model and visualise the results
-            self.setCallbacks()
-            self.modelTrain()
-        else:
-            try:
-                # Load the model
-                #self.model = keras.models.load_model(os.path.join(self.modelPath, 'model.keras'))
-                self.model.load_weights(os.path.join(self.modelPath, 'model.weights.h5'))
-            except:
-                logging.error('Desired model: ' + self.layerName + '-' + self.modelName + ' cannot be loaded...')
-                traceback.print_exc()
-                return
+        # Set callbacks, train model and visualise the results
+        self.setCallbacks()
+        self.modelTrain()
 
         if evalFlag:
             # Encode, decode and visualise the training data
@@ -87,9 +77,17 @@ class ModelTrainAndEval():
 
         try:
             # Configure the early stopping callback
-            self.esCallBack = callbacks.EarlyStopping(
-                monitor = 'loss', 
+            if self.typeAE == 'VAE1' or self.typeAE == 'VAE2' or self.typeAE == 'VQVAE1':
+
+                self.esCallBack = callbacks.EarlyStopping(
+                monitor = 'total_loss', 
                 patience = 10)
+                
+            else:
+                
+                self.esCallBack = callbacks.EarlyStopping(
+                    monitor = 'loss', 
+                    patience = 10)
 
         except:
             logging.error('Callback initialization of the ' + self.layerName + '-' + self.modelName + ' model failed...')
