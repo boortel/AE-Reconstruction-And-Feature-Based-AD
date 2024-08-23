@@ -34,7 +34,9 @@ Modifications of the BAE2 and VAE2 cores are illustrated on the figure bellow:
 
 - Download the V2 dataset at: [*Industry Biscuit (Cookie) dataset*](https://www.kaggle.com/datasets/imonbilk/industry-biscuit-cookie-dataset) and run the attached script *DatasetFolder.py* to get a folder structured dataset. For the expriments, we used training dataset of 1000 OK samples, validation dataset of 500 OK samples and test dataset of 200 OK and 200 NOK samples.
 
-- Set the training and evaluation flags in the script *main.py* and run it. Models has to be trained before evaluation and each model has to have a corresponding *ini* file in the *init* directory. All those files will be processed by the main function and this script will automatically create subdirectory in *data* to store the model weights and evaluation results.
+- Set the evaluation flag in the script *FrameworkTrain.py* and run it to train the selected autoencoders. Models has to be trained before evaluation and each model has to have a corresponding *ini* file in the *init* directory. All those files will be processed by the main function and this script will automatically create subdirectory in *data* to store the model weights and evaluation results.
+
+- Use the script *FrameworkEvaluate.py* to perform evaluation on the unknown data. Set the *saveImgToFile* argument to True if you would like to have your data sorted as *OK / NOK*.
 
 - Create custom models in the modules *ModelSaved.py* and *ModelLayers.py*. Create corresponding *ini* files in the *init* directory.
 
