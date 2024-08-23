@@ -50,7 +50,8 @@ This repository is still under development and it is based the research presente
 Please cite the article *Toward phytoplankton parasite detection using autoencoders* in your further work:
 
 ```
-@Article{Bilik2023,
+@inproceedings{BUT171163,
+    @Article{Bilik2023,
     author={Bilik, Simon
     and Batrakhanov, Daniel
     and Eerola, Tuomas
