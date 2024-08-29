@@ -20,15 +20,12 @@ import yaml
 import argparse
 import configparser
 
+import cv2 as cv
 import numpy as np
-import matplotlib.pyplot as plt
+import tensorflow as tf
 
 from pathlib import Path
-from sklearn.utils import gen_batches
-
 from typing import Dict, List, Type
-from keras_preprocessing.image import img_to_array, load_img
-
 
 from ModelSaved import ModelSaved
 
@@ -57,6 +54,14 @@ def parse_args():
     args = parser.parse_args()
 
     return args
+
+## Normalize dataset
+def changeInputsTest(images):
+    
+    normalization_layer = tf.keras.layers.Rescaling(1./65536)
+    x_norm = tf.image.resize(normalization_layer(images),[images.shape[1], images.shape[2]], method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
+    
+    return x_norm
 
 
 ## Main function
@@ -133,14 +138,6 @@ def main():
             # 'HardNet4' : ModelClassificationHardNet4,
         }[featureExtractorName]
 
-        # Get the list of all image files
-        images = []
-        imagePaths = []
-        allowedSuffixes = ['.jpg', '.jpeg','.png', '.bmp', '.gif']
-
-        fileList = map(Path, os.listdir(predictionDataPath))
-        imageFileList = [file for file in fileList if file.suffix.lower() in allowedSuffixes]
-
         ## Prepare the directory to store the predictions
         if not os.path.exists(predictionResultPath):
             os.mkdir(predictionResultPath)
@@ -152,67 +149,63 @@ def main():
         if not os.path.exists(nokPath):
             os.mkdir(nokPath)
 
+        # Prepare the YAML file with predictions
         labelsPath = os.path.join(predictionResultPath, 'labels.yaml')
         labelsDict = {'OK': [], 'NOK':[]}
 
-        ## Set constants
-        batchCount = 0
-        imageSize = (imageDim[0], imageDim[1])
+        # Set data generator
+        ds = tf.keras.utils.image_dataset_from_directory(
+            (predictionDataPath),
+            image_size = (imageDim[0], imageDim[1]),
+            color_mode = 'rgb' if imageDim[2] == 3 else 'grayscale',
+            batch_size = predictionBatchSize,
+            label_mode = None,
+            shuffle = False)
         
-        # Loop through the image files
-        for imageFile in imageFileList:
-            imagePath = Path(predictionDataPath) / imageFile
+        # Get the filenames
+        fileNames = ds.file_paths
+        
+        startTime = time.time()
 
-            image = load_img(imagePath, target_size=imageSize)
-            imageArray = img_to_array(image)
+        # Normalize data and get the reconstruction
+        #ds = ds.map(changeInputsTest)
+        output = model.predict(ds)
 
-            imagePaths.append(imagePath)
-            images.append(imageArray)
+        # Normalize the decoded data
+        #for i in range(output.shape[0]):
+        #    output[i] = cv.normalize(output[i], None, 0, 1, cv.NORM_MINMAX, cv.CV_32F)
 
-            # load images in batches (if the amount of loaded images is big enough for a batch,
-            # or if the number ofremaining images is less than the size of a batch and all of them are loaded
-            if len(images) >= predictionBatchSize or len(images) == len(imageFileList) - (predictionBatchSize * batchCount):
+        # Build prediction data
+        prediction_data = {
+            'Predict':
+            {
+                'Org': np.concatenate([img for img in ds], axis=0),
+                'Dec': output,
+                'Lab': [None for _ in output],
+            }
+        }
 
-                startTime = time.time()
+        # Get the labels and sort the OK / NOK files
+        labels = featureExtractor(os.path.join(basePath, 'modelData'), '', '', '', '', imageDim, prediction_data, [anomalyAlgorythmName], False).predictedLabels
+        sorted = {imagePath: label for imagePath, label in zip(fileNames, labels)}
 
-                batchCount += 1
-                input = np.array(images) / 255
-                output = model.predict(input)
+        OK = [imagePath for imagePath, label in sorted.items() if label]
+        NOK = [imagePath for imagePath, label in sorted.items() if not label]
 
-                # Build prediction data
-                prediction_data = {
-                    'Predict':
-                    {
-                        'Org': input,
-                        'Dec': output,
-                        'Lab': [None for _ in input],
-                    }
-                }
+        print("--- %s seconds ---" % (time.time() - startTime))
 
-                labels = featureExtractor(os.path.join(basePath, 'modelData'), '', '', '', '', imageDim, prediction_data, [anomalyAlgorythmName], False).predictedLabels
+        # Save the sorted images if set
+        if saveImgToFile:
+            for subDir, images in zip((okPath, nokPath), (OK, NOK)):
+                for image in images:
+                    os.popen(f'cp {image} {subDir}')
 
-                # Get the OK-NOK labels
-                sorted = {imagePath: label for imagePath, label in zip(imagePaths, labels)}
-                OK = [imagePath for imagePath, label in sorted.items() if label]
-                NOK = [imagePath for imagePath, label in sorted.items() if not label]
+        # Store the labels to the dictionary
+        for label, results in zip(('OK', 'NOK'), (OK, NOK)):
+            paths = [f'{os.path.abspath(r)}' for r in results]
 
-                # Save the sorted images if set
-                if saveImgToFile:
-                    for subDir, images in zip((okPath, nokPath), (OK, NOK)):
-                        for image in images:
-                            os.popen(f'cp {image} {subDir}')
-
-                # Store the labels to the dictionary
-                for label, results in zip(('OK', 'NOK'), (OK, NOK)):
-                    paths = [f'{os.path.abspath(r)}' for r in results]
-
-                    if paths != []:
-                        labelsDict[label].append(paths)
-
-                imagePaths.clear()
-                images.clear()
-
-                print("--- %s seconds ---" % (time.time() - startTime))
+            if paths != []:
+                labelsDict[label].append(paths)
 
         with open(labelsPath, 'w') as labelsFile:
             yaml.safe_dump(labelsDict, labelsFile)
