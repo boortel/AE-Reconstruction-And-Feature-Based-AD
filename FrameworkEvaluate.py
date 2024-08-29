@@ -168,12 +168,12 @@ def main():
         startTime = time.time()
 
         # Normalize data and get the reconstruction
-        #ds = ds.map(changeInputsTest)
+        ds = ds.map(changeInputsTest)
         output = model.predict(ds)
 
         # Normalize the decoded data
-        #for i in range(output.shape[0]):
-        #    output[i] = cv.normalize(output[i], None, 0, 1, cv.NORM_MINMAX, cv.CV_32F)
+        for i in range(output.shape[0]):
+            output[i] = cv.normalize(output[i], None, 0, 1, cv.NORM_MINMAX, cv.CV_32F)
 
         # Build prediction data
         prediction_data = {
