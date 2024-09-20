@@ -81,8 +81,12 @@ class ModelClassificationHardNet1(ModelClassificationBase):
         gsData = []
         
         # Convert the data to grayscale and to required shape (batch, height, width, channel)
-        for img in diffData:
-            gsData.append(cv.resize(cv.cvtColor(img, cv.COLOR_BGR2GRAY), (32, 32), interpolation = cv.INTER_AREA))
+        if(diffData.shape[3] == 3):
+            for img in diffData:
+                gsData.append(cv.resize(cv.cvtColor(img, cv.COLOR_BGR2GRAY), (32, 32), interpolation = cv.INTER_AREA))
+        else:
+            for img in diffData:
+                gsData.append(cv.resize(np.squeeze(img), (32, 32), interpolation = cv.INTER_AREA))
             
         gsData = np.array(gsData)
         gsData = np.expand_dims(gsData, axis=3)

@@ -82,8 +82,27 @@ class ModelDataGenerators():
     ## Set the data generator
     def setGenerator(self, mode):
             
-        # Returns generator with and without the labels
-        ds = tf.keras.utils.image_dataset_from_directory(
+        # Returns generator with and without the labels, map the datasets (and augment only Train)
+        if mode == 'Train':
+            ds = tf.keras.utils.image_dataset_from_directory(
+            (self.datasetPath + mode),
+            image_size = self.tSize,
+            color_mode = self.cMode,
+            batch_size = self.batchSize,
+            label_mode = 'int',
+            shuffle = True)
+
+            dsL = tf.keras.utils.image_dataset_from_directory(
+            (self.datasetPath + mode),
+            image_size = self.tSize,
+            color_mode = self.cMode,
+            batch_size = self.batchSize,
+            label_mode = 'binary',
+            shuffle = True)
+
+            ds = ds.map(self.changeInputsTrain)
+        else:
+            ds = tf.keras.utils.image_dataset_from_directory(
             (self.datasetPath + mode),
             image_size = self.tSize,
             color_mode = self.cMode,
@@ -91,18 +110,14 @@ class ModelDataGenerators():
             label_mode = 'int',
             shuffle = False)
 
-        dsL = tf.keras.utils.image_dataset_from_directory(
+            dsL = tf.keras.utils.image_dataset_from_directory(
             (self.datasetPath + mode),
             image_size = self.tSize,
             color_mode = self.cMode,
             batch_size = self.batchSize,
             label_mode = 'binary',
             shuffle = False)
-        
-        # Map the datasets (and augment only Train)
-        if mode == 'Train':  
-            ds = ds.map(self.changeInputsTrain)
-        else:
+
             ds = ds.map(self.changeInputsTest)
             
         # Map the labeled dataset
@@ -158,7 +173,7 @@ class ModelDataGenerators():
             
             # Normalize the original data
             for i in range(orig_data.shape[0]):
-                orig_data[i] = cv.normalize(orig_data[i], None, 0, 1, cv.NORM_MINMAX, cv.CV_32F)
+                orig_data[i] = np.atleast_3d(cv.normalize(orig_data[i], None, 0, 1, cv.NORM_MINMAX, cv.CV_32F))
 
             # Get labels and transform them to format to -1: NOK and 1:OK
             labels = np.concatenate([labels for _, labels in dataGen], axis=0)
@@ -167,7 +182,7 @@ class ModelDataGenerators():
             
             # Filter the original data
             filterStrength = 0.5
-            orig_data = np.array([(filterStrength*img + (1 - filterStrength)*cv.GaussianBlur(img, (25,25), 0)) for img in orig_data])
+            orig_data = np.array([(filterStrength*img + (1 - filterStrength)*np.atleast_3d(cv.GaussianBlur(img, (25,25), 0))) for img in orig_data])
 
             # Save the obtained data to NPZ
             if self.npzSave:

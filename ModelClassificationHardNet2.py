@@ -86,7 +86,10 @@ class ModelClassificationHardNet2(ModelClassificationBase):
         for img in diffData:
             
             # Convert image to gray
-            img = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+            if(img.shape[2] == 3):
+                img = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+            else:
+                img = np.squeeze(img)
 
             # Split the image into 32x32 images
             batch = view_as_blocks(img, (32, 32))

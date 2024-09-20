@@ -58,7 +58,7 @@ def parse_args():
 ## Normalize dataset
 def changeInputsTest(images):
     
-    normalization_layer = tf.keras.layers.Rescaling(1./65536)
+    normalization_layer = tf.keras.layers.Rescaling(1./255)
     x_norm = tf.image.resize(normalization_layer(images),[images.shape[1], images.shape[2]], method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
     
     return x_norm
@@ -106,8 +106,10 @@ def main():
         # processLogs()
 
         # Select the optimal combination
+        #modelName = 'BAE2'
+        #layerName = 'ConvM4'
         modelName = 'BAE2'
-        layerName = 'ConvM4'
+        layerName = 'ConvM3'
         featureExtractorName = 'HardNet1'
         anomalyAlgorythmName = 'Robust covariance'
         basePath = os.path.join(experimentPath, f'{layerName}_{labelInfo}', modelName)
@@ -173,7 +175,7 @@ def main():
 
         # Normalize the decoded data
         for i in range(output.shape[0]):
-            output[i] = cv.normalize(output[i], None, 0, 1, cv.NORM_MINMAX, cv.CV_32F)
+            output[i] = np.atleast_3d(cv.normalize(output[i], None, 0, 1, cv.NORM_MINMAX, cv.CV_32F))
 
         # Build prediction data
         prediction_data = {

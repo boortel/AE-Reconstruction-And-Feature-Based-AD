@@ -67,7 +67,10 @@ class ModelClassificationSIFT(ModelClassificationBase):
     def imgPreprocess(self, img):
         
         # Map the image to UINT8
-        gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+        if(img.shape[2] == 3):
+            gray = cv.cvtColor(img, cv.COLOR_BGR2GRAY)
+        else:
+            gray = np.squeeze(img)
 
         imgP = cv.normalize(gray, None, 0, 255, cv.NORM_MINMAX, cv.CV_8U)
 
@@ -110,7 +113,7 @@ class ModelClassificationSIFT(ModelClassificationBase):
 
                 except:
                     # Not enough feature points, fill the missing values with zeros
-                    logging.warning('Missing ' + f'{float(nFeatures - counter):}' + ' feature points, appending zeros to fix the lenght.')
+                    #logging.warning('Missing ' + f'{float(nFeatures - counter):}' + ' feature points, appending zeros to fix the lenght.')
 
                     valSizeSIFT.append(0)
                     valRespSIFT.append(0)
