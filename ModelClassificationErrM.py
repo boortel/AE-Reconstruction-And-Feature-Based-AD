@@ -79,24 +79,27 @@ class ModelClassificationErrM(ModelClassificationBase):
         valuesSSIM = []
         valuesAvgH = []
 
-        # Define the color mode
-        if self.imageDim[2] == 3:
-            cMode = "RGB"
-            chAx = 2
-        else:
-            cMode = "L"
-            chAx = None
-
         # Compute the metrics for all images in dataset
         for i in range(len(orgData)):
 
             # TODO: predelat L2 tak, aby fungovala i pro cernobile
-            valuesL2.append(np.sum(np.square(np.subtract(orgData[i], decData[i])), axis=None))
-            valuesMSE.append(MSE(orgData[i], decData[i]))
-            valuesSSIM.append(SSIM(orgData[i], decData[i], data_range = 1, channel_axis = chAx))
+            if(orgData.shape[3] == 3):
+                valuesL2.append(np.sum(np.square(np.subtract(orgData[i], decData[i])), axis = None))
+                valuesSSIM.append(SSIM(orgData[i], decData[i], data_range = 1, channel_axis = 2))
+            else:
+                valuesL2.append(np.sum(np.square(np.subtract(np.squeeze(orgData[i]), np.squeeze(decData[i]))), axis=None))
+                valuesSSIM.append(SSIM(np.squeeze(orgData[i]), np.squeeze(decData[i]), data_range = 1, channel_axis = None))
 
-            imgOrg = Image.fromarray(orgData[i], mode = cMode)
-            imgDec = Image.fromarray(decData[i], mode = cMode)
+            valuesMSE.append(MSE(orgData[i], decData[i]))
+
+            # Convert images to gray
+            if(orgData.shape[3] == 3):
+                imgOrg = Image.fromarray(orgData[i], mode = "RGB")
+                imgDec = Image.fromarray(decData[i], mode = "RGB")
+            else:
+                imgOrg = Image.fromarray(np.squeeze(orgData[i]), mode = "L")
+                imgDec = Image.fromarray(np.squeeze(decData[i]), mode = "L")
+            
             valuesAvgH.append(imagehash.average_hash(imgOrg) - imagehash.average_hash(imgDec))
 
         # Convert the lists into the np arrays

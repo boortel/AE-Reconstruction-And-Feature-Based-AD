@@ -160,7 +160,7 @@ class ModelTrainAndEval():
                 
                 # Normalize the decoded data
                 for i in range(dec_out.shape[0]):
-                    dec_out[i] = cv.normalize(dec_out[i], None, 0, 1, cv.NORM_MINMAX, cv.CV_32F)
+                    dec_out[i] = np.atleast_3d(cv.normalize(dec_out[i], None, 0, 1, cv.NORM_MINMAX, cv.CV_32F))
                 
                 # Save the data for visualisation
                 self.dataGenerator.processedData[actStr]['Enc'] = enc_out
@@ -219,8 +219,12 @@ class ModelTrainAndEval():
                 ssimVal.append(SSIM(imgOrg, imgDec, data_range = 1, channel_axis = 2))
                 
                 # Convert images to gray
-                imgOrg = cv.cvtColor(imgOrg, cv.COLOR_BGR2GRAY)
-                imgDec = cv.cvtColor(imgDec, cv.COLOR_BGR2GRAY)
+                if(imgOrg.shape[2] == 3):
+                    imgOrg = cv.cvtColor(imgOrg, cv.COLOR_BGR2GRAY)
+                    imgDec = cv.cvtColor(imgDec, cv.COLOR_BGR2GRAY)
+                else:
+                    imgOrg = np.squeeze(imgOrg)
+                    imgDec = np.squeeze(imgDec)
                 
                 # Split the image into 32x32 images
                 batchOrg = view_as_blocks(imgOrg, (32, 32))

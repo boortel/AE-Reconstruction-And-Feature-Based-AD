@@ -86,8 +86,12 @@ class ModelClassificationHardNet4(ModelClassificationBase):
         for imgOrg, imgDec in zip(orgData, decData):
             
             # Convert images to gray
-            imgOrg = cv.cvtColor(imgOrg, cv.COLOR_BGR2GRAY)
-            imgDec = cv.cvtColor(imgDec, cv.COLOR_BGR2GRAY)
+            if(imgOrg.shape[2] == 3):
+                imgOrg = cv.cvtColor(imgOrg, cv.COLOR_BGR2GRAY)
+                imgDec = cv.cvtColor(imgDec, cv.COLOR_BGR2GRAY)
+            else:
+                imgOrg = np.squeeze(imgOrg)
+                imgDec = np.squeeze(imgDec)
             
             # Split the image into 32x32 images
             batchOrg = view_as_blocks(imgOrg, (32, 32))
