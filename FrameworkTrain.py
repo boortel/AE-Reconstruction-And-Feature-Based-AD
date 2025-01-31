@@ -160,7 +160,7 @@ def main():
                 extractors = [
                     #ModelClassificationEnc,
                     ModelClassificationErrM,
-                    ModelClassificationSIFT,
+                    #ModelClassificationSIFT,
                     ModelClassificationHardNet1,
                     ModelClassificationHardNet2,
                     ModelClassificationHardNet3,

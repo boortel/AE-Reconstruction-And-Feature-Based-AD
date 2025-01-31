@@ -74,9 +74,9 @@ class ModelDataGenerators():
     def changeInputs(self, images, labels):
         
         normalization_layer = tf.keras.layers.Rescaling(1./255)
-        x = tf.image.resize(normalization_layer(images),[self.imageDim[0], self.imageDim[1]], method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
+        x_norm = tf.image.resize(normalization_layer(images),[self.imageDim[0], self.imageDim[1]], method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
         
-        return x, labels
+        return x_norm, labels
     
     
     ## Set the data generator
@@ -170,10 +170,6 @@ class ModelDataGenerators():
         
             # Get the original data to be saved in npz
             orig_data = np.concatenate([img for img, _ in dataGen], axis=0)
-            
-            # Normalize the original data
-            for i in range(orig_data.shape[0]):
-                orig_data[i] = np.atleast_3d(cv.normalize(orig_data[i], None, 0, 1, cv.NORM_MINMAX, cv.CV_32F))
 
             # Get labels and transform them to format to -1: NOK and 1:OK
             labels = np.concatenate([labels for _, labels in dataGen], axis=0)
