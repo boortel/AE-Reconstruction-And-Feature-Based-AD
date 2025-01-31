@@ -307,6 +307,8 @@ class ModelClassificationBase():
             # Fit the data and tag outliers
             y_pred = tstScores
             
+            #optimal_trs = 0
+
             okIdx = np.where(tstScores >= optimal_trs)
             nokIdx = np.where(tstScores < optimal_trs)
             

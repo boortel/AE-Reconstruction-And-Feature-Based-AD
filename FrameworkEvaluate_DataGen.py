@@ -16,6 +16,7 @@ Please select the desired model from the module ModelSaved.py as the model argum
 import os
 import time
 import yaml
+import shutil
 
 import argparse
 import configparser
@@ -106,12 +107,11 @@ def main():
         # processLogs()
 
         # Select the optimal combination
-        #modelName = 'BAE2'
-        #layerName = 'ConvM4'
         modelName = 'BAE2'
-        layerName = 'ConvM3'
-        featureExtractorName = 'HardNet1'
-        anomalyAlgorythmName = 'Robust covariance'
+        layerName = 'ConvM4'
+        featureExtractorName = 'HardNet2'
+        anomalyAlgorythmName = 'Local Outlier Factor'
+        
         basePath = os.path.join(experimentPath, f'{layerName}_{labelInfo}', modelName)
         aeWeightsPath = os.path.join(basePath, 'model.weights.h5')
 
@@ -166,33 +166,44 @@ def main():
         
         # Get the filenames
         fileNames = ds.file_paths
-        
+
+        # Normalize dataset
+        ds = ds.map(changeInputsTest)
+
         startTime = time.time()
 
-        # Normalize data and get the reconstruction
-        ds = ds.map(changeInputsTest)
+        # Get the reconstruction
         output = model.predict(ds)
 
-        # Normalize the decoded data
-        for i in range(output.shape[0]):
-            output[i] = np.atleast_3d(cv.normalize(output[i], None, 0, 1, cv.NORM_MINMAX, cv.CV_32F))
+        # Filter the original data
+        filterStrength = 0.5
+        orig_data = np.concatenate([img for img in ds], axis=0)
+        orig_data = np.array([(filterStrength*img + (1 - filterStrength)*np.atleast_3d(cv.GaussianBlur(img, (25,25), 0))) for img in orig_data])
 
         # Build prediction data
         prediction_data = {
             'Predict':
             {
-                'Org': np.concatenate([img for img in ds], axis=0),
+                'Org': orig_data,
                 'Dec': output,
                 'Lab': [None for _ in output],
             }
         }
-
+        
         # Get the labels and sort the OK / NOK files
-        labels = featureExtractor(os.path.join(basePath, 'modelData'), '', '', '', '', imageDim, prediction_data, [anomalyAlgorythmName], False).predictedLabels
-        sorted = {imagePath: label for imagePath, label in zip(fileNames, labels)}
+        feature_extractor:Type[ModelClassificationBase] = featureExtractor(
+            os.path.join(basePath, 'modelData'),
+            predictionResultPath, modelName, layerName, 'Classification test', imageDim,
+            prediction_data,
+            [anomalyAlgorythmName],
+            False
+        )
+        
+        labels = feature_extractor.predictedLabels
+        sortedLabel = {imagePath: label for imagePath, label in zip(fileNames, labels)}
 
-        OK = [imagePath for imagePath, label in sorted.items() if label]
-        NOK = [imagePath for imagePath, label in sorted.items() if not label]
+        OK = [imagePath for imagePath, label in sortedLabel.items() if label]
+        NOK = [imagePath for imagePath, label in sortedLabel.items() if not label]
 
         print("--- %s seconds ---" % (time.time() - startTime))
 
@@ -200,7 +211,7 @@ def main():
         if saveImgToFile:
             for subDir, images in zip((okPath, nokPath), (OK, NOK)):
                 for image in images:
-                    os.popen(f'cp {image} {subDir}')
+                    shutil.copy(image, subDir)
 
         # Store the labels to the dictionary
         for label, results in zip(('OK', 'NOK'), (OK, NOK)):

@@ -9,6 +9,7 @@ This class is used for training and evaluation of the selected model
 """
 
 import os
+import random
 import logging
 import traceback
 import keras.models
@@ -16,6 +17,10 @@ import keras.models
 import cv2 as cv
 import numpy as np
 import tensorflow as tf
+
+random.seed(42)
+np.random.seed(42)
+tf.random.set_seed(42)
 
 import matplotlib.pyplot as plt
 
@@ -157,10 +162,6 @@ class ModelTrainAndEval():
 
                 # Get the decoded data
                 dec_out = self.model.predict(dataGen)
-                
-                # Normalize the decoded data
-                for i in range(dec_out.shape[0]):
-                    dec_out[i] = np.atleast_3d(cv.normalize(dec_out[i], None, 0, 1, cv.NORM_MINMAX, cv.CV_32F))
                 
                 # Save the data for visualisation
                 self.dataGenerator.processedData[actStr]['Enc'] = enc_out

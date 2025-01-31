@@ -11,7 +11,7 @@ This class returns convolutional layers later used in the ModelSaved.py script. 
 import logging
 import numpy as np
 
-from keras.layers import Input, Conv2D, Conv2DTranspose, MaxPooling2D, UpSampling2D, BatchNormalization, LeakyReLU
+from keras.layers import Input, Conv2D, Conv2DTranspose, MaxPooling2D, UpSampling2D, BatchNormalization, LeakyReLU, Normalization
 
 
 ## Class with the saved models
@@ -69,28 +69,28 @@ class ModelLayers():
         # Structure from MVT
         elif self.layerSel == 'ConvM2':
             
-            netEnc = Conv2D(32, (4, 4), strides=2, activation='relu', padding='same', name='conv_E1')(input_img)
+            netEnc = Conv2D(32, (4, 4), strides=2, activation='sigmoid', padding='same', name='conv_E1')(input_img)
             netEnc = BatchNormalization(name='bn_E1')(netEnc)
             
-            netEnc = Conv2D(32, (4, 4), strides=2, activation='relu', padding='same', name='conv_E2')(netEnc)
+            netEnc = Conv2D(32, (4, 4), strides=2, activation='sigmoid', padding='same', name='conv_E2')(netEnc)
             netEnc = BatchNormalization(name='bn_E2')(netEnc)
             
-            netEnc = Conv2D(32, (3, 3), strides=1, activation='relu', padding='same', name='conv_E3')(netEnc)
+            netEnc = Conv2D(32, (3, 3), strides=1, activation='sigmoid', padding='same', name='conv_E3')(netEnc)
             netEnc = BatchNormalization(name='bn_E3')(netEnc)
             
-            netEnc = Conv2D(64, (4, 4), strides=2, activation='relu', padding='same', name='conv_E4')(netEnc)
+            netEnc = Conv2D(64, (4, 4), strides=2, activation='sigmoid', padding='same', name='conv_E4')(netEnc)
             netEnc = BatchNormalization(name='bn_E4')(netEnc)
             
-            netEnc = Conv2D(64, (3, 3), strides=1, activation='relu', padding='same', name='conv_E5')(netEnc)
+            netEnc = Conv2D(64, (3, 3), strides=1, activation='sigmoid', padding='same', name='conv_E5')(netEnc)
             netEnc = BatchNormalization(name='bn_E5')(netEnc)
             
-            netEnc = Conv2D(128, (4, 4), strides=2, activation='relu', padding='same', name='conv_E6')(netEnc)
+            netEnc = Conv2D(128, (4, 4), strides=2, activation='sigmoid', padding='same', name='conv_E6')(netEnc)
             netEnc = BatchNormalization(name='bn_E6')(netEnc)
             
-            netEnc = Conv2D(64, (3, 3), strides=1, activation='relu', padding='same', name='conv_E7')(netEnc)
+            netEnc = Conv2D(64, (3, 3), strides=1, activation='sigmoid', padding='same', name='conv_E7')(netEnc)
             netEnc = BatchNormalization(name='bn_E7')(netEnc)
             
-            netEnc = Conv2D(32, (3, 3), strides=1, activation='relu', padding='same', name='conv_E8')(netEnc)
+            netEnc = Conv2D(32, (3, 3), strides=1, activation='sigmoid', padding='same', name='conv_E8')(netEnc)
             netEnc = BatchNormalization(name='bn_E8')(netEnc)
             
             netEnc = Conv2D(1, (8, 8), strides=1, padding='same', name='out_E')(netEnc)
@@ -104,10 +104,10 @@ class ModelLayers():
         # Basic structure 1
         elif self.layerSel == 'ConvM3':
             
-            netEnc = Conv2D(32, 3, activation="relu", strides=2, padding="same", name='conv_E1')(input_img)
+            netEnc = Conv2D(32, 3, activation="sigmoid", strides=2, padding="same", name='conv_E1')(input_img)
             netEnc = BatchNormalization(name='bn_E1')(netEnc)
             
-            netEnc = Conv2D(64, 3, activation="relu", strides=2, padding="same", name='out_E')(netEnc)
+            netEnc = Conv2D(64, 3, activation="sigmoid", strides=2, padding="same", name='out_E')(netEnc)
             netEnc = BatchNormalization(name='bn_E2')(netEnc)
             
             ## Encoding reduction parameters
@@ -118,11 +118,11 @@ class ModelLayers():
         # Basic structure 2
         elif self.layerSel == 'ConvM4':
             
-            netEnc = Conv2D(8, (5, 5), activation='relu', padding='same', name='conv_E1')(input_img)
+            netEnc = Conv2D(8, (5, 5), activation='sigmoid', padding='same', name='conv_E1')(input_img)
             netEnc = MaxPooling2D((2, 2), padding='same', name='mpool_E1')(netEnc)
             netEnc = BatchNormalization(name='bn_E1')(netEnc)
             
-            netEnc = Conv2D(4, (3, 3), activation='relu', padding='same', name='conv_E2')(netEnc)
+            netEnc = Conv2D(4, (3, 3), activation='sigmoid', padding='same', name='conv_E2')(netEnc)
             netEnc = MaxPooling2D((2, 2), padding='same', name='out_E')(netEnc)
             netEnc = BatchNormalization(name='bn_E2')(netEnc)
             
@@ -134,15 +134,15 @@ class ModelLayers():
         # Basic structure 3 from https://blog.keras.io/building-autoencoders-in-keras.html
         elif self.layerSel == 'ConvM5':
             
-            netEnc = Conv2D(16, (3, 3), activation='relu', padding='same', name='conv_E1')(input_img)
+            netEnc = Conv2D(16, (3, 3), activation='sigmoid', padding='same', name='conv_E1')(input_img)
             netEnc = MaxPooling2D((2, 2), padding='same', name='mpool_E1')(netEnc)
             netEnc = BatchNormalization(name='bn_E1')(netEnc)
             
-            netEnc = Conv2D(8, (3, 3), activation='relu', padding='same', name='conv_E2')(netEnc)
+            netEnc = Conv2D(8, (3, 3), activation='sigmoid', padding='same', name='conv_E2')(netEnc)
             netEnc = MaxPooling2D((2, 2), padding='same', name='mpool_E2')(netEnc)
             netEnc = BatchNormalization(name='bn_E2')(netEnc)
             
-            netEnc = Conv2D(4, (3, 3), activation='relu', padding='same', name='conv_E3')(netEnc)
+            netEnc = Conv2D(4, (3, 3), activation='sigmoid', padding='same', name='conv_E3')(netEnc)
             netEnc = MaxPooling2D((2, 2), padding='same', name='out_E')(netEnc)
             netEnc = BatchNormalization(name='bn_E3')(netEnc)
             
@@ -154,15 +154,15 @@ class ModelLayers():
         # Asymetric encoder and decoder (ConvM5 vs ConvM4)
         elif self.layerSel == 'ConvM6':
             
-            netEnc = Conv2D(16, (3, 3), activation='relu', padding='same', name='conv_E1')(input_img)
+            netEnc = Conv2D(16, (3, 3), activation='sigmoid', padding='same', name='conv_E1')(input_img)
             netEnc = MaxPooling2D((2, 2), padding='same', name='mpool_E1')(netEnc)
             netEnc = BatchNormalization(name='bn_E1')(netEnc)
             
-            netEnc = Conv2D(8, (3, 3), activation='relu', padding='same', name='conv_E2')(netEnc)
+            netEnc = Conv2D(8, (3, 3), activation='sigmoid', padding='same', name='conv_E2')(netEnc)
             netEnc = MaxPooling2D((2, 2), padding='same', name='mpool_E2')(netEnc)
             netEnc = BatchNormalization(name='bn_E2')(netEnc)
             
-            netEnc = Conv2D(4, (3, 3), activation='relu', padding='same', name='conv_E3')(netEnc)
+            netEnc = Conv2D(4, (3, 3), activation='sigmoid', padding='same', name='conv_E3')(netEnc)
             netEnc = MaxPooling2D((2, 2), padding='same', name='out_E')(netEnc)
             netEnc = BatchNormalization(name='bn_E3')(netEnc)
             
@@ -214,32 +214,32 @@ class ModelLayers():
         # Structure from MVT
         elif self.layerSel == 'ConvM2':
             
-            netDec = Conv2D(filterCount, (3, 3), strides=1, activation='relu', padding='same', name='conv_D1')(inputNet)
-            netDec = Conv2D(64, (3, 3), strides=1, activation='relu', padding='same', name='conv_D2')(netDec)
+            netDec = Conv2D(filterCount, (3, 3), strides=1, activation='sigmoid', padding='same', name='conv_D1')(inputNet)
+            netDec = Conv2D(64, (3, 3), strides=1, activation='sigmoid', padding='same', name='conv_D2')(netDec)
             netDec = UpSampling2D((2, 2), name='upsmp_D1')(netDec)
             netDec = BatchNormalization(name='bn_D1')(netDec)
             
-            netDec = Conv2D(128, (4, 4), strides=2, activation='relu', padding='same', name='conv_D3')(netDec)
+            netDec = Conv2D(128, (4, 4), strides=2, activation='sigmoid', padding='same', name='conv_D3')(netDec)
             netDec = UpSampling2D((2, 2), name='upsmp_D2')(netDec)
             netDec = BatchNormalization(name='bn_D2')(netDec)
             
-            netDec = Conv2D(64, (3, 3), strides=1, activation='relu', padding='same', name='conv_D4')(netDec)
+            netDec = Conv2D(64, (3, 3), strides=1, activation='sigmoid', padding='same', name='conv_D4')(netDec)
             netDec = UpSampling2D((2, 2), name='upsmp_D3')(netDec)
             netDec = BatchNormalization(name='bn_D3')(netDec)
             
-            netDec = Conv2D(64, (4, 4), strides=2, activation='relu', padding='same', name='conv_D5')(netDec)
+            netDec = Conv2D(64, (4, 4), strides=2, activation='sigmoid', padding='same', name='conv_D5')(netDec)
             netDec = UpSampling2D((2, 2), name='upsmp_D4')(netDec)
             netDec = BatchNormalization(name='bn_D4')(netDec)
             
-            netDec = Conv2D(32, (3, 3), strides=1, activation='relu', padding='same', name='conv_D6')(netDec)
+            netDec = Conv2D(32, (3, 3), strides=1, activation='sigmoid', padding='same', name='conv_D6')(netDec)
             netDec = UpSampling2D((2, 2), name='upsmp_D5')(netDec)
             netDec = BatchNormalization(name='bn_D5')(netDec)
             
-            netDec = Conv2D(32, (4, 4), strides=2, activation='relu', padding='same', name='conv_D7')(netDec)
+            netDec = Conv2D(32, (4, 4), strides=2, activation='sigmoid', padding='same', name='conv_D7')(netDec)
             netDec = UpSampling2D((4, 4), name='upsmp_D6')(netDec)
             netDec = BatchNormalization(name='bn_D6')(netDec)
             
-            netDec = Conv2D(32, (4, 4), strides=2, activation='relu', padding='same', name='conv_D8')(netDec)
+            netDec = Conv2D(32, (4, 4), strides=2, activation='sigmoid', padding='same', name='conv_D8')(netDec)
             netDec = UpSampling2D((2, 2), name='upsmp_D7')(netDec)
             netDec = BatchNormalization(name='bn_D7')(netDec)
             
@@ -248,8 +248,8 @@ class ModelLayers():
         # Basic structure 1
         elif self.layerSel == 'ConvM3':
             
-            netDec = Conv2DTranspose(filterCount, (3, 3), activation="relu", strides = 2, padding="same", name='convT_D1')(inputNet)
-            netDec = Conv2DTranspose(32, (3, 3), activation="relu", strides = 2, padding="same", name='convT_D2')(netDec)
+            netDec = Conv2DTranspose(filterCount, (3, 3), activation="sigmoid", strides = 2, padding="same", name='convT_D1')(inputNet)
+            netDec = Conv2DTranspose(32, (3, 3), activation="sigmoid", strides = 2, padding="same", name='convT_D2')(netDec)
             netDec = BatchNormalization(name='bn_D1')(netDec)
 
             output_img = Conv2DTranspose(self.imChannel, (3, 3), activation="sigmoid", padding="same", name='convT_D3')(netDec)
@@ -257,11 +257,11 @@ class ModelLayers():
         # Basic structure 2
         elif self.layerSel == 'ConvM4':
             
-            netDec = Conv2D(filterCount, (3, 3), activation='relu', padding='same', name='conv_D1')(inputNet)
+            netDec = Conv2D(filterCount, (3, 3), activation='sigmoid', padding='same', name='conv_D1')(inputNet)
             netDec = UpSampling2D((2, 2), name='upsmp_D1')(netDec)
             netDec = BatchNormalization(name='bn_D1')(netDec)
             
-            netDec = Conv2D(8, (5, 5), activation='relu', padding='same', name='conv_D2')(netDec)
+            netDec = Conv2D(8, (5, 5), activation='sigmoid', padding='same', name='conv_D2')(netDec)
             netDec = UpSampling2D((2, 2), name='upsmp_D2')(netDec)
             netDec = BatchNormalization(name='bn_D2')(netDec)
             
@@ -270,15 +270,15 @@ class ModelLayers():
         # Basic structure 3
         elif self.layerSel == 'ConvM5':
             
-            netDec = Conv2D(filterCount, (3, 3), activation='relu', padding='same', name='conv_D1')(inputNet)
+            netDec = Conv2D(filterCount, (3, 3), activation='sigmoid', padding='same', name='conv_D1')(inputNet)
             netDec = UpSampling2D((2, 2), name='upsmp_D1')(netDec)
             netDec = BatchNormalization(name='bn_D1')(netDec)
             
-            netDec = Conv2D(8, (3, 3), activation='relu', padding='same', name='conv_D2')(netDec)
+            netDec = Conv2D(8, (3, 3), activation='sigmoid', padding='same', name='conv_D2')(netDec)
             netDec = UpSampling2D((2, 2), name='upsmp_D2')(netDec)
             netDec = BatchNormalization(name='bn_D2')(netDec)
             
-            netDec = Conv2D(16, (3, 3), activation='relu', padding='same', name='conv_D3')(netDec)
+            netDec = Conv2D(16, (3, 3), activation='sigmoid', padding='same', name='conv_D3')(netDec)
             netDec = UpSampling2D((2, 2), name='upsmp_D3')(netDec)
             netDec = BatchNormalization(name='bn_D3')(netDec)
             
@@ -288,11 +288,11 @@ class ModelLayers():
         # Asymetric encoder and decoder (ConvM5 vs ConvM4)
         elif self.layerSel == 'ConvM6':
             
-            netDec = Conv2D(filterCount, (3, 3), activation='relu', padding='same', name='conv_D1')(inputNet)
+            netDec = Conv2D(filterCount, (3, 3), activation='sigmoid', padding='same', name='conv_D1')(inputNet)
             netDec = UpSampling2D((4, 4), name='upsmp_D1')(netDec)
             netDec = BatchNormalization(name='bn_D1')(netDec)
             
-            netDec = Conv2D(8, (5, 5), activation='relu', padding='same', name='conv_D2')(netDec)
+            netDec = Conv2D(8, (5, 5), activation='sigmoid', padding='same', name='conv_D2')(netDec)
             netDec = UpSampling2D((2, 2), name='upsmp_D2')(netDec)
             netDec = BatchNormalization(name='bn_D2')(netDec)
             
