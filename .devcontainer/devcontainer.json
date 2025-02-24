@@ -1,0 +1,45 @@
+{
+	"name": "AE-Reconstruction-And-Feature-Based-AD",
+	"build": {
+		// Path is relative to the devcontainer.json file.
+		"dockerfile": "../docker/dev/Dockerfile"
+	},
+	"containerEnv": {
+		// "PYTHONPATH": "/workspaces/ ...",
+		"HYDRA_FULL_ERROR": "1",
+		// turns off albumentations warning about new version
+		"NO_ALBUMENTATIONS_UPDATE": "1"
+	},
+	// Use 'postCreateCommand' to run commands after the container is created.
+	"postCreateCommand": "git config --global --add safe.directory ${containerWorkspaceFolder} && ./.devcontainer/post_create_command.sh",
+	// "postCreateCommand": "pip3 install --no-cache-dir -r requirements.txt && pre-commit install",
+
+	// there is a bug that prevent some extensions from installing, following is a temporary hack
+	//https://github.com/microsoft/vscode-remote-release/issues/9616
+	"extensions.verifySignature": false,
+	// Configure tool-specific properties.
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"ms-python.python",
+				"KevinRose.vsc-python-indent",
+				"eamodio.gitlens",
+				"ms-toolsai.jupyter",
+				"ms-toolsai.jupyter-renderers",
+				"ms-python.black-formatter",
+				"ms-python.isort",
+				"GeriYoco.vscode-image-gallery",
+				"streetsidesoftware.code-spell-checker",
+				"streetsidesoftware.code-spell-checker-czech",
+				"mikoz.autoflake-extension"
+			]
+		}
+	},
+	"runArgs": [
+		"--gpus=all",
+		"--shm-size=24G",
+	],
+	"mounts": [
+		
+	]
+}
