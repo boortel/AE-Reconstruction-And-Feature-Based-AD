@@ -1,0 +1,17 @@
+[project]
+requires-python = "==3.11.8"
+
+[tool.black]
+line-length = 120
+skip-string-normalization = true
+
+[tool.isort]
+multi_line_output = 3
+include_trailing_comma = true
+force_grid_wrap = 0
+line_length = 120
+profile = "black"
+
+[tool.pyright]
+exclude = ["data", "data_cache"]
+extraPaths = ["dinov2", "aliked"]
