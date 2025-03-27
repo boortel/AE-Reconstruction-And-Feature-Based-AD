@@ -6,12 +6,16 @@ def main():
 # input parameters
     parser = argparse.ArgumentParser(description='ArgParser')
     parser.add_argument('--input', type=str, default='./ProgramLog.txt', help='input file path with file name')
-    parser.add_argument('--output', type=str, default='./log/parsed-log.json', help='output file path with file name')
+    parser.add_argument('--output', type=str, default='./log/parsedLogVibration.json', help='output file path with file name')
     args = parser.parse_args()
     str_input = args.input
     str_output = args.output
-    str_output_all = os.path.join(os.path.dirname(args.output),"parsed-all-log_CookieLot.json")
+    str_output_all = os.path.join(os.path.dirname(args.output),"parsedLogVibration_All.json")
     dictionary = {}
+    
+    ## Prepare the directory to store the predictions
+    if not os.path.exists('./log'):
+        os.mkdir('./log')
 
     with open(str_input) as f:
         txt = f.read()
