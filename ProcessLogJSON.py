@@ -4,12 +4,12 @@ import json
 def main():
 
     # Open JSON files as dictionary
-    f = open('log/parsed-all-log_CookieLot.json')
+    f = open('log/parsedLogVibration_All.json')
     dataAll = json.load(f)
 
-    Datasets = dataAll['Cookie_OCC']
+    Datasets = dataAll['Vibration_AD']
 
-    f = open('log/parsed-all-log_CookieLot.json')
+    f = open('log/parsedLogVibration_All.json')
     dataPln = json.load(f)
 
 
