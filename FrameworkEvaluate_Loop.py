@@ -1,4 +1,3 @@
-
 # -*- coding: utf-8 -*-
 """
 Created on Fri Aug 23 11:50:00 2024
@@ -14,9 +13,11 @@ Please select the desired model from the module ModelSaved.py as the model argum
 """
 
 import os
+import re
 import time
 import yaml
 import shutil
+import random
 
 import argparse
 import configparser
@@ -25,8 +26,15 @@ import cv2 as cv
 import numpy as np
 import tensorflow as tf
 
+random.seed(42)
+np.random.seed(42)
+tf.random.set_seed(42)
+
+from glob import glob
 from pathlib import Path
 from typing import Dict, List, Type
+
+from keras_preprocessing.image import img_to_array, load_img
 
 from ModelSaved import ModelSaved
 
@@ -64,6 +72,12 @@ def changeInputsTest(images):
     
     return x_norm
 
+## Natural sort of data
+def natural_sort(l): 
+    convert = lambda text: int(text) if text.isdigit() else text.lower()
+    alphanum_key = lambda key: [convert(c) for c in re.split('([0-9]+)', key)]
+    return sorted(l, key=alphanum_key)
+
 
 ## Main function
 def main():
@@ -98,8 +112,8 @@ def main():
                     cfg.getint('General', 'imChannel', fallback = '0'))
 
         # Prediction configuration
-        predictionDataPath = cfg.get('Prediction', 'predictionDataPath', fallback = '-')
-        predictionResultPath = cfg.get('Prediction', 'predictionResultPath', fallback = '-')
+        predictionDataPath = cfg.get('Prediction', 'predictionDataPath', fallback = '.')
+        predictionResultPath = cfg.get('Prediction', 'predictionResultPath', fallback = '.')
         predictionBatchSize = cfg.getint('Prediction', 'batchSize', fallback = '0')
 
         ## Find the optimal combination
@@ -107,11 +121,12 @@ def main():
         # processLogs()
 
         # Select the optimal combination
-        modelName = cfg.get('Prediction', 'modelName', fallback = '-')
-        layerName = cfg.get('Prediction', 'layerName', fallback = '-')
-        featureExtractorName = cfg.get('Prediction', 'featureExtractorName', fallback = '-')
-        anomalyAlgorythmName = cfg.get('Prediction', 'anomalyAlgorythmName', fallback = '-')
-        
+        #modelName = 'BAE2'
+        #layerName = 'ConvM4'
+        modelName = 'BAE1'
+        layerName = 'ConvM1'
+        featureExtractorName = 'HardNet2'
+        anomalyAlgorythmName = 'Local Outlier Factor'
         basePath = os.path.join(experimentPath, f'{layerName}_{labelInfo}', modelName)
         aeWeightsPath = os.path.join(basePath, 'model.weights.h5')
 
@@ -140,9 +155,21 @@ def main():
             # 'HardNet4' : ModelClassificationHardNet4,
         }[featureExtractorName]
 
+        # Get the list of all image files
+        images = []
+        imagePaths = []
+        allowedSuffixes = ['.jpg', '.jpeg','.png', '.bmp', '.gif']
+
+        
+        #fileList = map(Path, os.listdir(predictionDataPath))
+        fileList = sorted(Path(predictionDataPath).glob('*.*'))
+
+        imageFileList = [file for file in sorted(fileList) if file.suffix.lower() in allowedSuffixes]
+        #fileNames = sorted([os.path.join(predictionDataPath, fname) for fname in os.listdir(predictionDataPath)])
+
         ## Prepare the directory to store the predictions
         if not os.path.exists(predictionResultPath):
-            os.makedirs(predictionResultPath)
+            os.mkdir(predictionResultPath)
 
         okPath, nokPath = [os.path.join(predictionResultPath, subfolder) for subfolder in ['OK', 'NOK']]
 
@@ -151,87 +178,72 @@ def main():
         if not os.path.exists(nokPath):
             os.mkdir(nokPath)
 
-        # Prepare the YAML file with predictions
         labelsPath = os.path.join(predictionResultPath, 'labels.yaml')
         labelsDict = {'OK': [], 'NOK':[]}
 
-        # Set data generator
-        ds = tf.keras.utils.image_dataset_from_directory(
-            (predictionDataPath),
-            image_size = (imageDim[0], imageDim[1]),
-            color_mode = 'rgb' if imageDim[2] == 3 else 'grayscale',
-            batch_size = predictionBatchSize,
-            label_mode = None,
-            shuffle = False)
+        ## Set constants
+        batchCount = 0
+        imageSize = (imageDim[0], imageDim[1])
         
-        # Get the filenames
-        fileNames = ds.file_paths
+        # Loop through the image files
+        for imageFile in imageFileList:
+            imagePath = Path(predictionDataPath) / imageFile
 
-        # Normalize dataset
-        ds = ds.map(changeInputsTest)
+            image = load_img(imagePath, target_size=imageSize)
+            imageArray = img_to_array(image)
 
-        #for batch in ds:
-            
-        startTime = time.time()
+            imagePaths.append(imagePath)
+            images.append(imageArray)
 
-        # Get the reconstruction
-        output = model.predict(ds)
+            # load images in batches (if the amount of loaded images is big enough for a batch,
+            # or if the number ofremaining images is less than the size of a batch and all of them are loaded
+            if len(images) >= predictionBatchSize or len(images) == len(imageFileList) - (predictionBatchSize * batchCount):
 
-        # Filter the original data
-        filterStrength = 0.5
-        orig_data = np.concatenate([img for img in ds], axis=0)
-        #orig_data = batch.numpy()
-        orig_data = np.array([(filterStrength*img + (1 - filterStrength)*np.atleast_3d(cv.GaussianBlur(img, (25,25), 0))) for img in orig_data])
+                startTime = time.time()
 
-        # Build prediction data
-        prediction_data = {
-            'Predict':
-            {
-                'Org': orig_data,
-                'Dec': output,
-                'Lab': [None for _ in output],
-            }
-        }
-        
-        # Get the labels and sort the OK / NOK files
-        feature_extractor:Type[ModelClassificationBase] = featureExtractor(
-            os.path.join(basePath, 'modelData'),
-            predictionResultPath, modelName, layerName, 'Classification test', imageDim,
-            prediction_data,
-            [anomalyAlgorythmName],
-            False
-        )
-        
-        labels = feature_extractor.predictedLabels
-        sortedLabel = {imagePath: label for imagePath, label in zip(fileNames, labels)}
+                batchCount += 1
+                input = np.array(images) / 255
+                output = model.predict(input)
 
-        OK = [imagePath for imagePath, label in sortedLabel.items() if label]
-        NOK = [imagePath for imagePath, label in sortedLabel.items() if not label]
+                # Build prediction data
+                prediction_data = {
+                    'Predict':
+                    {
+                        'Org': input,
+                        'Dec': output,
+                        'Lab': [None for _ in input],
+                    }
+                }
 
-        print("--- %s seconds ---" % (time.time() - startTime))
+                labels = featureExtractor(os.path.join(basePath, 'modelData'), '', '', '', '', imageDim, prediction_data, [anomalyAlgorythmName], False).predictedLabels
 
-        # Save the sorted images if set
-        if saveImgToFile:
-            for subDir, images in zip((okPath, nokPath), (OK, NOK)):
-                for image in images:
-                    shutil.copy(image, subDir)
+                # Get the OK-NOK labels
+                sortedLabels = {imagePath: label for imagePath, label in zip(imagePaths, labels)}
+                OK = [imagePath for imagePath, label in sortedLabels.items() if label]
+                NOK = [imagePath for imagePath, label in sortedLabels.items() if not label]
 
-        # Save only the NOK images
-        #if saveImgToFile:
-        #    for image in NOK:
-        #        shutil.copy(image, nokPath)
+                # Save the sorted images if set
+                if saveImgToFile:
+                    for subDir, images in zip((okPath, nokPath), (OK, NOK)):
+                        for image in images:
+                            shutil.copy(image, subDir)
 
-        # Store the labels to the dictionary
-        for label, results in zip(('OK', 'NOK'), (OK, NOK)):
-            paths = [f'{os.path.abspath(r)}' for r in results]
+                # Store the labels to the dictionary
+                for label, results in zip(('OK', 'NOK'), (OK, NOK)):
+                    paths = [f'{os.path.abspath(r)}' for r in results]
 
-            if paths != []:
-                labelsDict[label].append(paths)
+                    if paths != []:
+                        labelsDict[label].append(paths)
 
-    with open(labelsPath, 'w') as labelsFile:
-        yaml.safe_dump(labelsDict, labelsFile)
+                imagePaths.clear()
+                images.clear()
 
+                print("--- %s seconds ---" % (time.time() - startTime))
+
+        with open(labelsPath, 'w') as labelsFile:
+            yaml.safe_dump(labelsDict, labelsFile)
+
+        return
         
 if __name__ == '__main__':
     main()
-    

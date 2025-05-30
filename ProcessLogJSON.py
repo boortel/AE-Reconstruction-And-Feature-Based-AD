@@ -4,12 +4,12 @@ import json
 def main():
 
     # Open JSON files as dictionary
-    f = open('log/parsed-all-log_CookieLot.json')
+    f = open('log/parsedLogPlanktonIFCB167.json')
     dataAll = json.load(f)
 
-    Datasets = dataAll['Cookie_OCC']
+    Datasets = dataAll['Pauliella_IFCB167_OCC']
 
-    f = open('log/parsed-all-log_CookieLot.json')
+    f = open('log/parsedLogPlanktonIFCB167.json')
     dataPln = json.load(f)
 
 
@@ -74,20 +74,20 @@ def main():
                     print('Model: ' + model + ' ,Feature extractor: ' + f_ext + ' ,Classifier: ' + clas + ', F1 score: ' + f'{float(F1):.2f}' + ' , AUC: ' + f'{float(AUC):.2f}')
 
 
-    
-    ## Get per-species results for the selected MEC (Tab1)
-    speciesRes = {}
+    if False:
+        ## Get per-species results for the selected MEC (Tab1)
+        speciesRes = {}
 
-    # Loop through the plankton species
-    for species in dataPln:
+        # Loop through the plankton species
+        for species in dataPln:
 
-        AUC = dataPln[species]['models'][bestMEC['model']]['f_exts'][bestMEC['f_ext']]['classifiers'][bestMEC['class']]['alg_metrics']['auc-roc']
+            AUC = dataPln[species]['models'][bestMEC['model']]['f_exts'][bestMEC['f_ext']]['classifiers'][bestMEC['class']]['alg_metrics']['auc-roc']
 
-        PREC = dataPln[species]['models'][bestMEC['model']]['f_exts'][bestMEC['f_ext']]['classifiers'][bestMEC['class']]['alg_metrics']['precision']
-        REC = dataPln[species]['models'][bestMEC['model']]['f_exts'][bestMEC['f_ext']]['classifiers'][bestMEC['class']]['alg_metrics']['recall']
-        F1 = dataPln[species]['models'][bestMEC['model']]['f_exts'][bestMEC['f_ext']]['classifiers'][bestMEC['class']]['alg_metrics']['f1']
+            PREC = dataPln[species]['models'][bestMEC['model']]['f_exts'][bestMEC['f_ext']]['classifiers'][bestMEC['class']]['alg_metrics']['precision']
+            REC = dataPln[species]['models'][bestMEC['model']]['f_exts'][bestMEC['f_ext']]['classifiers'][bestMEC['class']]['alg_metrics']['recall']
+            F1 = dataPln[species]['models'][bestMEC['model']]['f_exts'][bestMEC['f_ext']]['classifiers'][bestMEC['class']]['alg_metrics']['f1']
 
-        speciesRes[species] = {'AUC': AUC, 'PREC': PREC, 'REC': REC, 'F1': F1}
+            speciesRes[species] = {'AUC': AUC, 'PREC': PREC, 'REC': REC, 'F1': F1}
 
     ## Fix feature extractor and classifier, get results for all models (Tab2)
     fixedEC = {}
@@ -182,21 +182,21 @@ def main():
 
 
     ## Generate LateX tables
+    if False:
+        # Table 1
+        with open('log/table1.txt', 'w+') as f:
 
-    # Table 1
-    with open('log/table1.txt', 'w+') as f:
+            f.write('Dataset    & AUC score & F1 score  & Prec  &   Rec   \\\ \n')
 
-        f.write('Dataset    & AUC score & F1 score  & Prec  &   Rec   \\\ \n')
+            for spec in speciesRes:
 
-        for spec in speciesRes:
+                AUC = speciesRes[spec]['AUC']
 
-            AUC = speciesRes[spec]['AUC']
+                PREC = speciesRes[spec]['PREC']
+                REC = speciesRes[spec]['REC']
+                F1 = speciesRes[spec]['F1']
 
-            PREC = speciesRes[spec]['PREC']
-            REC = speciesRes[spec]['REC']
-            F1 = speciesRes[spec]['F1']
-
-            f.write(spec + '\t\t\t& ' + f'{float(AUC):.2f}' + '\t\t\t& ' + f'{float(F1):.2f}' + '\t& ' + f'{float(PREC):.2f}' + '\t& ' + f'{float(REC):.2f}' + '    \\\ \n')
+                f.write(spec + '\t\t\t& ' + f'{float(AUC):.2f}' + '\t\t\t& ' + f'{float(F1):.2f}' + '\t& ' + f'{float(PREC):.2f}' + '\t& ' + f'{float(REC):.2f}' + '    \\\ \n')
 
     # Table 2
     with open('log/table2.txt', 'w+') as f:
