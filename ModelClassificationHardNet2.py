@@ -14,7 +14,7 @@ import traceback
 import cv2 as cv
 import numpy as np
 
-from HardNet import HardNet
+from models.hardnet import HardNet
 from skimage.util import view_as_blocks
 
 from ModelClassificationBase import ModelClassificationBase
@@ -97,6 +97,8 @@ class ModelClassificationHardNet2(ModelClassificationBase):
 
             # Get HardNet features and its norm
             temp = self.hardNet.forward(batch)
+            if hasattr(temp, 'detach'):
+                temp = temp.detach().cpu().numpy()
 
             norms = np.linalg.norm(temp, None, axis=0)
             metrics.append(norms)

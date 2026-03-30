@@ -143,7 +143,8 @@ class ModelClassificationBase():
 
         transformer = RobustScaler().fit(data)
         dataSc = transformer.transform(data)
-
+        noise = np.random.normal(0, 1e-10, dataSc.shape)
+        dataSc = dataSc + noise
         #return (data - np.min(data)) / (np.max(data) - np.min(data))
         return dataSc
 
@@ -223,7 +224,7 @@ class ModelClassificationBase():
         # Compare AD detection algorithms
         outliers_fraction = 0.01
         available_anomaly_algorithms = [
-            ("Robust covariance", EllipticEnvelope(contamination = outliers_fraction, support_fraction = 0.9)),
+            ("Robust covariance", EllipticEnvelope(contamination = outliers_fraction, support_fraction = 0.99)),
             ("One-Class SVM", svm.OneClassSVM(nu = outliers_fraction, kernel = "rbf", gamma = 'scale')),
             ("Isolation Forest", IsolationForest(contamination = outliers_fraction, random_state = 42)),
             ("Local Outlier Factor", LocalOutlierFactor(n_neighbors = 15, contamination = outliers_fraction, novelty = True))]
@@ -346,7 +347,7 @@ class ModelClassificationBase():
         else:
             perp = 30
         
-        tsne_metrics = TSNE(n_components=2, perplexity=perp, n_iter=1000, learning_rate=100, init='pca').fit_transform(metrics)
+        tsne_metrics = TSNE(n_components=2, perplexity=perp, max_iter=1000, learning_rate=100, init='pca').fit_transform(metrics)
 
         # Perform the PCA and feature space visualisation
         pca = PCA(n_components=2)

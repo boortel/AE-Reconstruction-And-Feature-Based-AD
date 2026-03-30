@@ -1,0 +1,6 @@
+#!/workspaces/AE-Reconstruction-And-Feature-Based-AD/.torch_environment/bin/python3
+import sys
+from charset_normalizer.cli.normalizer import cli_detect
+if __name__ == '__main__':
+    sys.argv[0] = sys.argv[0].removesuffix('.exe')
+    sys.exit(cli_detect())

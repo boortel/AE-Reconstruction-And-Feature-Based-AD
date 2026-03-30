@@ -1,3 +1,4 @@
+
 # -*- coding: utf-8 -*-
 """
 Created on Tues Nov 15 2022
@@ -9,302 +10,172 @@ This class returns convolutional layers later used in the ModelSaved.py script. 
 """
 
 import logging
-import numpy as np
+import torch
+import torch.nn as nn
+from dataclasses import dataclass
 
-from keras.layers import Input, Conv2D, Conv2DTranspose, MaxPooling2D, UpSampling2D, BatchNormalization, LeakyReLU, Normalization
 
 
-## Class with the saved models
-class ModelLayers():
+@dataclass
+class LayerConfig:
+    """Configuration for encoder-decoder pair."""
 
-    ## Set the constants and paths
-    def __init__(self, layerSel, imageDim):
+    name: str
+    reduction_factor: int  # How much the spatial dimensions are reduced
+    bottleneck_channels: int
 
-        # Global parameters
-        self.layerSel = layerSel
-        
-        # Image dimensions
-        self.imHeight = imageDim[0]
-        self.imWidth = imageDim[1]
-        self.imChannel = imageDim[2]
-        
-    ## Get encoder convolutional layers
-    def getEncoder(self):
-        
-        input_img = Input(shape = (self.imHeight, self.imWidth, self.imChannel), name='input_layer')
-        
-        # Structure from https://keras.io/examples/generative/vae/
-        if self.layerSel == 'ConvM1':
 
-            # Block-1
-            netEnc = Conv2D(32, kernel_size=3, strides= 2, padding='same', name='conv_E1')(input_img)
-            netEnc = BatchNormalization(name='bn_E1')(netEnc)
-            netEnc = LeakyReLU(name='lrelu_E1')(netEnc)
+LAYER_CONFIGS: dict[str, LayerConfig] = {
+    "ConvM1": LayerConfig("ConvM1", 32, 64),
+    "ConvM2": LayerConfig("ConvM2", 16, 1),
+    "ConvM3": LayerConfig("ConvM3", 4, 64),
+    "ConvM4": LayerConfig("ConvM4", 4, 4),
+    "ConvM5": LayerConfig("ConvM5", 8, 4),
+    "ConvM6": LayerConfig("ConvM6", 8, 4),
+}
 
-            # Block-2
-            netEnc = Conv2D(64, kernel_size=3, strides= 2, padding='same', name='conv_E2')(netEnc)
-            netEnc = BatchNormalization(name='bn_E2')(netEnc)
-            netEnc = LeakyReLU(name='lrelu_E2')(netEnc)
 
-            # Block-3
-            netEnc = Conv2D(64, 3, 2, padding='same', name='conv_E3')(netEnc)
-            netEnc = BatchNormalization(name='bn_E3')(netEnc)
-            netEnc = LeakyReLU(name='lrelu_E3')(netEnc)
-
-            # Block-4
-            netEnc = Conv2D(64, 3, 2, padding='same', name='conv_E4')(netEnc)
-            netEnc = BatchNormalization(name='bn_E4')(netEnc)
-            netEnc = LeakyReLU(name='lrelu_E4')(netEnc)
-
-            # Block-5
-            netEnc = Conv2D(64, 3, 2, padding='same', name='conv_E5')(netEnc)
-            netEnc = BatchNormalization(name='bn_E5')(netEnc)
-            netEnc = LeakyReLU(name='out_E')(netEnc)
-
-            ## Encoding reduction parameters
-            redEncHeight = np.int32(self.imHeight / 32)
-            redEncWidth = np.int32(self.imWidth / 32)
-            filterCount = np.int32(64)
-            
-        # Structure from MVT
-        elif self.layerSel == 'ConvM2':
-            
-            netEnc = Conv2D(32, (4, 4), strides=2, activation='sigmoid', padding='same', name='conv_E1')(input_img)
-            netEnc = BatchNormalization(name='bn_E1')(netEnc)
-            
-            netEnc = Conv2D(32, (4, 4), strides=2, activation='sigmoid', padding='same', name='conv_E2')(netEnc)
-            netEnc = BatchNormalization(name='bn_E2')(netEnc)
-            
-            netEnc = Conv2D(32, (3, 3), strides=1, activation='sigmoid', padding='same', name='conv_E3')(netEnc)
-            netEnc = BatchNormalization(name='bn_E3')(netEnc)
-            
-            netEnc = Conv2D(64, (4, 4), strides=2, activation='sigmoid', padding='same', name='conv_E4')(netEnc)
-            netEnc = BatchNormalization(name='bn_E4')(netEnc)
-            
-            netEnc = Conv2D(64, (3, 3), strides=1, activation='sigmoid', padding='same', name='conv_E5')(netEnc)
-            netEnc = BatchNormalization(name='bn_E5')(netEnc)
-            
-            netEnc = Conv2D(128, (4, 4), strides=2, activation='sigmoid', padding='same', name='conv_E6')(netEnc)
-            netEnc = BatchNormalization(name='bn_E6')(netEnc)
-            
-            netEnc = Conv2D(64, (3, 3), strides=1, activation='sigmoid', padding='same', name='conv_E7')(netEnc)
-            netEnc = BatchNormalization(name='bn_E7')(netEnc)
-            
-            netEnc = Conv2D(32, (3, 3), strides=1, activation='sigmoid', padding='same', name='conv_E8')(netEnc)
-            netEnc = BatchNormalization(name='bn_E8')(netEnc)
-            
-            netEnc = Conv2D(1, (8, 8), strides=1, padding='same', name='out_E')(netEnc)
-            netEnc = BatchNormalization(name='bn_E9')(netEnc)
-            
-            ## Encoding reduction parameters
-            redEncHeight = np.int32(self.imHeight / 16)
-            redEncWidth = np.int32(self.imWidth / 16)
-            filterCount = np.int32(16)
-        
-        # Basic structure 1
-        elif self.layerSel == 'ConvM3':
-            
-            netEnc = Conv2D(32, 3, activation="sigmoid", strides=2, padding="same", name='conv_E1')(input_img)
-            netEnc = BatchNormalization(name='bn_E1')(netEnc)
-            
-            netEnc = Conv2D(64, 3, activation="sigmoid", strides=2, padding="same", name='out_E')(netEnc)
-            netEnc = BatchNormalization(name='bn_E2')(netEnc)
-            
-            ## Encoding reduction parameters
-            redEncHeight = np.int32(self.imHeight / 4)
-            redEncWidth = np.int32(self.imWidth / 4)
-            filterCount = np.int32(64)
-        
-        # Basic structure 2
-        elif self.layerSel == 'ConvM4':
-            
-            netEnc = Conv2D(8, (5, 5), activation='sigmoid', padding='same', name='conv_E1')(input_img)
-            netEnc = MaxPooling2D((2, 2), padding='same', name='mpool_E1')(netEnc)
-            netEnc = BatchNormalization(name='bn_E1')(netEnc)
-            
-            netEnc = Conv2D(4, (3, 3), activation='sigmoid', padding='same', name='conv_E2')(netEnc)
-            netEnc = MaxPooling2D((2, 2), padding='same', name='out_E')(netEnc)
-            netEnc = BatchNormalization(name='bn_E2')(netEnc)
-            
-            ## Encoding reduction parameters
-            redEncHeight = np.int32(self.imHeight / 4)
-            redEncWidth = np.int32(self.imWidth / 4)
-            filterCount = np.int32(4)
-            
-        # Basic structure 3 from https://blog.keras.io/building-autoencoders-in-keras.html
-        elif self.layerSel == 'ConvM5':
-            
-            netEnc = Conv2D(16, (3, 3), activation='sigmoid', padding='same', name='conv_E1')(input_img)
-            netEnc = MaxPooling2D((2, 2), padding='same', name='mpool_E1')(netEnc)
-            netEnc = BatchNormalization(name='bn_E1')(netEnc)
-            
-            netEnc = Conv2D(8, (3, 3), activation='sigmoid', padding='same', name='conv_E2')(netEnc)
-            netEnc = MaxPooling2D((2, 2), padding='same', name='mpool_E2')(netEnc)
-            netEnc = BatchNormalization(name='bn_E2')(netEnc)
-            
-            netEnc = Conv2D(4, (3, 3), activation='sigmoid', padding='same', name='conv_E3')(netEnc)
-            netEnc = MaxPooling2D((2, 2), padding='same', name='out_E')(netEnc)
-            netEnc = BatchNormalization(name='bn_E3')(netEnc)
-            
-            ## Encoding reduction parameters
-            redEncHeight = np.int32(self.imHeight / 8)
-            redEncWidth = np.int32(self.imWidth / 8)
-            filterCount = np.int32(4)
-            
-        # Asymetric encoder and decoder (ConvM5 vs ConvM4)
-        elif self.layerSel == 'ConvM6':
-            
-            netEnc = Conv2D(16, (3, 3), activation='sigmoid', padding='same', name='conv_E1')(input_img)
-            netEnc = MaxPooling2D((2, 2), padding='same', name='mpool_E1')(netEnc)
-            netEnc = BatchNormalization(name='bn_E1')(netEnc)
-            
-            netEnc = Conv2D(8, (3, 3), activation='sigmoid', padding='same', name='conv_E2')(netEnc)
-            netEnc = MaxPooling2D((2, 2), padding='same', name='mpool_E2')(netEnc)
-            netEnc = BatchNormalization(name='bn_E2')(netEnc)
-            
-            netEnc = Conv2D(4, (3, 3), activation='sigmoid', padding='same', name='conv_E3')(netEnc)
-            netEnc = MaxPooling2D((2, 2), padding='same', name='out_E')(netEnc)
-            netEnc = BatchNormalization(name='bn_E3')(netEnc)
-            
-            ## Encoding reduction parameters
-            redEncHeight = np.int32(self.imHeight / 8)
-            redEncWidth = np.int32(self.imWidth / 8)
-            filterCount = np.int32(4)
-            
-            
-        # TODO: Define and add other models in the same way
-
-        else:
-            logging.error('Unknown convolutional net name: ' + self.layerSel)
-            raise ValueError('Unknown convolutional net name: ' + self.layerSel)
-            return
-        
-        return netEnc, input_img, redEncHeight, redEncWidth, filterCount
+def get_encoder(layer_sel, in_channels):
+    """ Returns the Encoder model based on the selected layer configuration. """
     
+    if layer_sel == 'ConvM1':
+        return nn.Sequential(
+            nn.Conv2d(in_channels, 32, kernel_size=3, stride=2, padding=1), nn.BatchNorm2d(32), nn.LeakyReLU(),
+            nn.Conv2d(32, 64, kernel_size=3, stride=2, padding=1), nn.BatchNorm2d(64), nn.LeakyReLU(),
+            nn.Conv2d(64, 64, kernel_size=3, stride=2, padding=1), nn.BatchNorm2d(64), nn.LeakyReLU(),
+            nn.Conv2d(64, 64, kernel_size=3, stride=2, padding=1), nn.BatchNorm2d(64), nn.LeakyReLU(),
+            nn.Conv2d(64, 64, kernel_size=3, stride=2, padding=1), nn.BatchNorm2d(64), nn.LeakyReLU()
+        )
+
+    elif layer_sel == 'ConvM2':
+        return nn.Sequential(
+            nn.Conv2d(in_channels, 32, kernel_size=4, stride=2, padding=1), nn.BatchNorm2d(32), nn.Sigmoid(),
+            nn.Conv2d(32, 32, kernel_size=4, stride=2, padding=1), nn.BatchNorm2d(32), nn.Sigmoid(),
+            nn.Conv2d(32, 32, kernel_size=3, stride=1, padding='same'), nn.BatchNorm2d(32), nn.Sigmoid(),
+            nn.Conv2d(32, 64, kernel_size=4, stride=2, padding=1), nn.BatchNorm2d(64), nn.Sigmoid(),
+            nn.Conv2d(64, 64, kernel_size=3, stride=1, padding='same'), nn.BatchNorm2d(64), nn.Sigmoid(),
+            nn.Conv2d(64, 128, kernel_size=4, stride=2, padding=1), nn.BatchNorm2d(128), nn.Sigmoid(),
+            nn.Conv2d(128, 64, kernel_size=3, stride=1, padding='same'), nn.BatchNorm2d(64), nn.Sigmoid(),
+            nn.Conv2d(64, 32, kernel_size=3, stride=1, padding='same'), nn.BatchNorm2d(32), nn.Sigmoid(),
+            nn.Conv2d(32, 1, kernel_size=8, stride=1, padding='same'), nn.BatchNorm2d(1)
+        )
+
+    elif layer_sel == 'ConvM3':
+        return nn.Sequential(
+            nn.Conv2d(in_channels, 32, kernel_size=3, stride=2, padding=1), nn.BatchNorm2d(32), nn.Sigmoid(),
+            nn.Conv2d(32, 64, kernel_size=3, stride=2, padding=1), nn.BatchNorm2d(64), nn.Sigmoid()
+        )
+
+    elif layer_sel == 'ConvM4':
+        return nn.Sequential(
+            nn.Conv2d(in_channels, 8, kernel_size=5, stride=1, padding='same'), nn.MaxPool2d(2, 2), nn.BatchNorm2d(8), nn.Sigmoid(),
+            nn.Conv2d(8, 4, kernel_size=3, stride=1, padding='same'), nn.MaxPool2d(2, 2), nn.BatchNorm2d(4), nn.Sigmoid()
+        )
+
+    elif layer_sel == 'ConvM5':
+        return nn.Sequential(
+            nn.Conv2d(in_channels, 16, kernel_size=3, stride=1, padding='same'), nn.MaxPool2d(2, 2), nn.BatchNorm2d(16), nn.Sigmoid(),
+            nn.Conv2d(16, 8, kernel_size=3, stride=1, padding='same'), nn.MaxPool2d(2, 2), nn.BatchNorm2d(8), nn.Sigmoid(),
+            nn.Conv2d(8, 4, kernel_size=3, stride=1, padding='same'), nn.MaxPool2d(2, 2), nn.BatchNorm2d(4), nn.Sigmoid()
+        )
+
+    elif layer_sel == 'ConvM6':
+        return nn.Sequential(
+            nn.Conv2d(in_channels, 16, kernel_size=3, stride=1, padding='same'), nn.MaxPool2d(2, 2), nn.BatchNorm2d(16), nn.Sigmoid(),
+            nn.Conv2d(16, 8, kernel_size=3, stride=1, padding='same'), nn.MaxPool2d(2, 2), nn.BatchNorm2d(8), nn.Sigmoid(),
+            nn.Conv2d(8, 4, kernel_size=3, stride=1, padding='same'), nn.MaxPool2d(2, 2), nn.BatchNorm2d(4), nn.Sigmoid()
+        )
+
+    else:
+        logging.error(f'Unknown convolutional net name: {layer_sel}')
+        raise ValueError(f'Unknown convolutional net name: {layer_sel}')
+
+
+def get_decoder(layer_sel, in_channels, out_channels):
+    """ Returns the Decoder model based on the selected layer configuration. """
     
-    ## Get decoder convolutional layers
-    def getDecoder(self, inputNet, filterCount):
-        
-        # Structure from https://keras.io/examples/generative/vae/
-        if self.layerSel == 'ConvM1':
-        
-            # Block-1
-            netDec = Conv2DTranspose(filterCount, 3, strides= 2, padding='same', name='convT_D1')(inputNet)
-            netDec = BatchNormalization(name='bn_D1')(netDec)
-            netDec = LeakyReLU(name='lrelu_D1')(netDec)
+    if layer_sel == 'ConvM1':
+        # Added output_padding=1 to match Keras shape multiplication
+        return nn.Sequential(
+            nn.ConvTranspose2d(in_channels, in_channels, kernel_size=3, stride=2, padding=1, output_padding=1), nn.BatchNorm2d(in_channels), nn.LeakyReLU(),
+            nn.ConvTranspose2d(in_channels, 64, kernel_size=3, stride=2, padding=1, output_padding=1), nn.BatchNorm2d(64), nn.LeakyReLU(),
+            nn.ConvTranspose2d(64, 64, kernel_size=3, stride=2, padding=1, output_padding=1), nn.BatchNorm2d(64), nn.LeakyReLU(),
+            nn.ConvTranspose2d(64, 32, kernel_size=3, stride=2, padding=1, output_padding=1), nn.BatchNorm2d(32), nn.LeakyReLU(),
+            nn.ConvTranspose2d(32, out_channels, kernel_size=3, stride=2, padding=1, output_padding=1), nn.Sigmoid()
+        )
 
-            # Block-2
-            netDec = Conv2DTranspose(64, 3, strides= 2, padding='same', name='convT_D2')(netDec)
-            netDec = BatchNormalization(name='bn_D2')(netDec)
-            netDec = LeakyReLU(name='lrelu_D2')(netDec)
+    elif layer_sel == 'ConvM2':
+        # Replaced Keras UpSampling2D with PyTorch Upsample
+        return nn.Sequential(
+            nn.Conv2d(in_channels, in_channels, kernel_size=3, stride=1, padding='same'), nn.Sigmoid(),
+            nn.Conv2d(in_channels, 64, kernel_size=3, stride=1, padding='same'), nn.Sigmoid(),
+            nn.Upsample(scale_factor=2, mode='nearest'), nn.BatchNorm2d(64),
+            
+            nn.Conv2d(64, 128, kernel_size=4, stride=2, padding=1), nn.Sigmoid(),
+            nn.Upsample(scale_factor=2, mode='nearest'), nn.BatchNorm2d(128),
+            
+            nn.Conv2d(128, 64, kernel_size=3, stride=1, padding='same'), nn.Sigmoid(),
+            nn.Upsample(scale_factor=2, mode='nearest'), nn.BatchNorm2d(64),
+            
+            nn.Conv2d(64, 64, kernel_size=4, stride=2, padding=1), nn.Sigmoid(),
+            nn.Upsample(scale_factor=2, mode='nearest'), nn.BatchNorm2d(64),
+            
+            nn.Conv2d(64, 32, kernel_size=3, stride=1, padding='same'), nn.Sigmoid(),
+            nn.Upsample(scale_factor=2, mode='nearest'), nn.BatchNorm2d(32),
+            
+            nn.Conv2d(32, 32, kernel_size=4, stride=2, padding=1), nn.Sigmoid(),
+            nn.Upsample(scale_factor=4, mode='nearest'), nn.BatchNorm2d(32),
+            
+            nn.Conv2d(32, 32, kernel_size=4, stride=2, padding=1), nn.Sigmoid(),
+            nn.Upsample(scale_factor=2, mode='nearest'), nn.BatchNorm2d(32),
+            
+            nn.Conv2d(32, out_channels, kernel_size=8, stride=1, padding='same'), nn.Sigmoid()
+        )
 
-            # Block-3
-            netDec = Conv2DTranspose(64, 3, 2, padding='same', name='convT_D3')(netDec)
-            netDec = BatchNormalization(name='bn_D3')(netDec)
-            netDec = LeakyReLU(name='lrelu_D3')(netDec)
+    elif layer_sel == 'ConvM3':
+        return nn.Sequential(
+            nn.ConvTranspose2d(in_channels, in_channels, kernel_size=3, stride=2, padding=1, output_padding=1), nn.Sigmoid(),
+            nn.ConvTranspose2d(in_channels, 32, kernel_size=3, stride=2, padding=1, output_padding=1), nn.Sigmoid(),
+            nn.BatchNorm2d(32),
+            nn.ConvTranspose2d(32, out_channels, kernel_size=3, stride=1, padding=1), nn.Sigmoid() 
+        )
 
-            # Block-4
-            netDec = Conv2DTranspose(32, 3, 2, padding='same', name='convT_D4')(netDec)
-            netDec = BatchNormalization(name='bn_D4')(netDec)
-            netDec = LeakyReLU(name='lrelu_D4')(netDec)
+    elif layer_sel == 'ConvM4':
+        return nn.Sequential(
+            nn.Conv2d(in_channels, in_channels, kernel_size=3, stride=1, padding='same'), nn.Sigmoid(),
+            nn.Upsample(scale_factor=2, mode='nearest'), nn.BatchNorm2d(in_channels),
+            
+            nn.Conv2d(in_channels, 8, kernel_size=5, stride=1, padding='same'), nn.Sigmoid(),
+            nn.Upsample(scale_factor=2, mode='nearest'), nn.BatchNorm2d(8),
+            
+            nn.Conv2d(8, out_channels, kernel_size=3, stride=1, padding='same'), nn.Sigmoid()
+        )
 
-            # Block-5
-            output_img = Conv2DTranspose(self.imChannel, 3, 2,padding='same', activation='sigmoid', name='convT_D5')(netDec)
-        
-        # Structure from MVT
-        elif self.layerSel == 'ConvM2':
+    elif layer_sel == 'ConvM5':
+        return nn.Sequential(
+            nn.Conv2d(in_channels, in_channels, kernel_size=3, stride=1, padding='same'), nn.Sigmoid(),
+            nn.Upsample(scale_factor=2, mode='nearest'), nn.BatchNorm2d(in_channels),
             
-            netDec = Conv2D(filterCount, (3, 3), strides=1, activation='sigmoid', padding='same', name='conv_D1')(inputNet)
-            netDec = Conv2D(64, (3, 3), strides=1, activation='sigmoid', padding='same', name='conv_D2')(netDec)
-            netDec = UpSampling2D((2, 2), name='upsmp_D1')(netDec)
-            netDec = BatchNormalization(name='bn_D1')(netDec)
+            nn.Conv2d(in_channels, 8, kernel_size=3, stride=1, padding='same'), nn.Sigmoid(),
+            nn.Upsample(scale_factor=2, mode='nearest'), nn.BatchNorm2d(8),
             
-            netDec = Conv2D(128, (4, 4), strides=2, activation='sigmoid', padding='same', name='conv_D3')(netDec)
-            netDec = UpSampling2D((2, 2), name='upsmp_D2')(netDec)
-            netDec = BatchNormalization(name='bn_D2')(netDec)
+            nn.Conv2d(8, 16, kernel_size=3, stride=1, padding='same'), nn.Sigmoid(),
+            nn.Upsample(scale_factor=2, mode='nearest'), nn.BatchNorm2d(16),
             
-            netDec = Conv2D(64, (3, 3), strides=1, activation='sigmoid', padding='same', name='conv_D4')(netDec)
-            netDec = UpSampling2D((2, 2), name='upsmp_D3')(netDec)
-            netDec = BatchNormalization(name='bn_D3')(netDec)
-            
-            netDec = Conv2D(64, (4, 4), strides=2, activation='sigmoid', padding='same', name='conv_D5')(netDec)
-            netDec = UpSampling2D((2, 2), name='upsmp_D4')(netDec)
-            netDec = BatchNormalization(name='bn_D4')(netDec)
-            
-            netDec = Conv2D(32, (3, 3), strides=1, activation='sigmoid', padding='same', name='conv_D6')(netDec)
-            netDec = UpSampling2D((2, 2), name='upsmp_D5')(netDec)
-            netDec = BatchNormalization(name='bn_D5')(netDec)
-            
-            netDec = Conv2D(32, (4, 4), strides=2, activation='sigmoid', padding='same', name='conv_D7')(netDec)
-            netDec = UpSampling2D((4, 4), name='upsmp_D6')(netDec)
-            netDec = BatchNormalization(name='bn_D6')(netDec)
-            
-            netDec = Conv2D(32, (4, 4), strides=2, activation='sigmoid', padding='same', name='conv_D8')(netDec)
-            netDec = UpSampling2D((2, 2), name='upsmp_D7')(netDec)
-            netDec = BatchNormalization(name='bn_D7')(netDec)
-            
-            output_img = Conv2D(self.imChannel, (8, 8), activation='sigmoid', padding='same', name='conv_D9')(netDec)
-            
-        # Basic structure 1
-        elif self.layerSel == 'ConvM3':
-            
-            netDec = Conv2DTranspose(filterCount, (3, 3), activation="sigmoid", strides = 2, padding="same", name='convT_D1')(inputNet)
-            netDec = Conv2DTranspose(32, (3, 3), activation="sigmoid", strides = 2, padding="same", name='convT_D2')(netDec)
-            netDec = BatchNormalization(name='bn_D1')(netDec)
+            nn.Conv2d(16, out_channels, kernel_size=3, stride=1, padding='same'), nn.Sigmoid()
+        )
 
-            output_img = Conv2DTranspose(self.imChannel, (3, 3), activation="sigmoid", padding="same", name='convT_D3')(netDec)
-        
-        # Basic structure 2
-        elif self.layerSel == 'ConvM4':
+    elif layer_sel == 'ConvM6':
+        return nn.Sequential(
+            nn.Conv2d(in_channels, in_channels, kernel_size=3, stride=1, padding='same'), nn.Sigmoid(),
+            nn.Upsample(scale_factor=4, mode='nearest'), nn.BatchNorm2d(in_channels),
             
-            netDec = Conv2D(filterCount, (3, 3), activation='sigmoid', padding='same', name='conv_D1')(inputNet)
-            netDec = UpSampling2D((2, 2), name='upsmp_D1')(netDec)
-            netDec = BatchNormalization(name='bn_D1')(netDec)
+            nn.Conv2d(in_channels, 8, kernel_size=5, stride=1, padding='same'), nn.Sigmoid(),
+            nn.Upsample(scale_factor=2, mode='nearest'), nn.BatchNorm2d(8),
             
-            netDec = Conv2D(8, (5, 5), activation='sigmoid', padding='same', name='conv_D2')(netDec)
-            netDec = UpSampling2D((2, 2), name='upsmp_D2')(netDec)
-            netDec = BatchNormalization(name='bn_D2')(netDec)
-            
-            output_img = Conv2D(self.imChannel, (3, 3), activation='sigmoid', padding='same', name='conv_D3')(netDec)
-            
-        # Basic structure 3
-        elif self.layerSel == 'ConvM5':
-            
-            netDec = Conv2D(filterCount, (3, 3), activation='sigmoid', padding='same', name='conv_D1')(inputNet)
-            netDec = UpSampling2D((2, 2), name='upsmp_D1')(netDec)
-            netDec = BatchNormalization(name='bn_D1')(netDec)
-            
-            netDec = Conv2D(8, (3, 3), activation='sigmoid', padding='same', name='conv_D2')(netDec)
-            netDec = UpSampling2D((2, 2), name='upsmp_D2')(netDec)
-            netDec = BatchNormalization(name='bn_D2')(netDec)
-            
-            netDec = Conv2D(16, (3, 3), activation='sigmoid', padding='same', name='conv_D3')(netDec)
-            netDec = UpSampling2D((2, 2), name='upsmp_D3')(netDec)
-            netDec = BatchNormalization(name='bn_D3')(netDec)
-            
-            output_img = Conv2D(self.imChannel, (3, 3), activation='sigmoid', padding='same', name='conv_D4')(netDec)
-            
-            
-        # Asymetric encoder and decoder (ConvM5 vs ConvM4)
-        elif self.layerSel == 'ConvM6':
-            
-            netDec = Conv2D(filterCount, (3, 3), activation='sigmoid', padding='same', name='conv_D1')(inputNet)
-            netDec = UpSampling2D((4, 4), name='upsmp_D1')(netDec)
-            netDec = BatchNormalization(name='bn_D1')(netDec)
-            
-            netDec = Conv2D(8, (5, 5), activation='sigmoid', padding='same', name='conv_D2')(netDec)
-            netDec = UpSampling2D((2, 2), name='upsmp_D2')(netDec)
-            netDec = BatchNormalization(name='bn_D2')(netDec)
-            
-            output_img = Conv2D(self.imChannel, (3, 3), activation='sigmoid', padding='same', name='conv_D3')(netDec)
-        
-        
-        # TODO: Define and add other models in the same way
+            nn.Conv2d(8, out_channels, kernel_size=3, stride=1, padding='same'), nn.Sigmoid()
+        )
 
-        else:
-            logging.error('Unknown convolutional net name: ' + self.layerSel)
-            raise ValueError('Unknown convolutional net name: ' + self.layerSel)
-            return
-        
-        return output_img
-    
+    else:
+        logging.error(f'Unknown convolutional net name: {layer_sel}')
+        raise ValueError(f'Unknown convolutional net name: {layer_sel}')

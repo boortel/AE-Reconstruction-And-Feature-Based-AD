@@ -14,7 +14,7 @@ import traceback
 import cv2 as cv
 import numpy as np
 
-from HardNet import HardNet
+from models.hardnet import HardNet
 from sklearn.utils import gen_batches
 
 from ModelClassificationBase import ModelClassificationBase
@@ -98,6 +98,8 @@ class ModelClassificationHardNet1(ModelClassificationBase):
         # Get HardNet features  
         for batch in batches:
             temp = self.hardNet.forward(gsData[batch])
+            if hasattr(temp, 'detach'):
+                temp = temp.detach().cpu().numpy()
             
             if fsRun:
                 metrics = temp

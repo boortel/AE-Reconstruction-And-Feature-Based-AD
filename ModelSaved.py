@@ -1,34 +1,180 @@
 # -*- coding: utf-8 -*-
 """
 Created on Wed Jan 6 2021
-
-@author: Simon Bilik
+@author: Simon Bilik (Adapted to PyTorch)
 
 This class returns compiled autoencoder model later used in the ModelTrainAndEval.py script. Feel free to define any new models if necessary.
 
 """
 
-import keras
 import logging
 import traceback
-
-from keras import optimizers
-from keras.models import Model
-from keras.layers import Input, Conv2D, Dense, Flatten, Reshape
-
-from ModelLayers import ModelLayers
-from ModelHelperVAE import VAE, Sampling, VQVAETrainer, VectorQuantizer
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+from ModelLayers import get_encoder, get_decoder, LAYER_CONFIGS
 
 
-## Class with the saved models
+# ==============================================================================
+# PyTorch Sub-Modules (Equivalent to Keras functional API / ModelHelperVAE)
+# ==============================================================================
+
+class Sampling(nn.Module):
+    """Uses (z_mean, z_log_var) to sample z."""
+    def forward(self, z_mean, z_log_var):
+        std = torch.exp(0.5 * z_log_var)
+        eps = torch.randn_like(std)
+        return z_mean + eps * std
+
+class VectorQuantizer(nn.Module):
+    """Vector Quantization Layer for VQ-VAE"""
+    def __init__(self, num_embeddings, embedding_dim, commitment_cost=0.25):
+        super().__init__()
+        self.embedding_dim = embedding_dim
+        self.num_embeddings = num_embeddings
+        self.commitment_cost = commitment_cost
+        self.embeddings = nn.Embedding(self.num_embeddings, self.embedding_dim)
+        self.embeddings.weight.data.uniform_(-1/self.num_embeddings, 1/self.num_embeddings)
+
+    def forward(self, inputs):
+        flat_input = inputs.permute(0, 2, 3, 1).contiguous().view(-1, self.embedding_dim)
+        distances = (torch.sum(flat_input**2, dim=1, keepdim=True) 
+                    + torch.sum(self.embeddings.weight**2, dim=1)
+                    - 2 * torch.matmul(flat_input, self.embeddings.weight.t()))
+            
+        encoding_indices = torch.argmin(distances, dim=1).unsqueeze(1)
+        encodings = torch.zeros(encoding_indices.shape[0], self.num_embeddings, device=inputs.device)
+        encodings.scatter_(1, encoding_indices, 1)
+        
+        quantized = torch.matmul(encodings, self.embeddings.weight).view(inputs.permute(0, 2, 3, 1).shape)
+        
+        e_latent_loss = F.mse_loss(quantized.detach(), inputs.permute(0, 2, 3, 1))
+        q_latent_loss = F.mse_loss(quantized, inputs.permute(0, 2, 3, 1).detach())
+        loss = q_latent_loss + self.commitment_cost * e_latent_loss
+        
+        quantized = inputs.permute(0, 2, 3, 1) + (quantized - inputs.permute(0, 2, 3, 1)).detach()
+        return quantized.permute(0, 3, 1, 2).contiguous(), loss
+
+
+# --- Model Architectures ---
+
+class BAE1_Net(nn.Module):
+    def __init__(self, encoder, decoder):
+        super().__init__()
+        self.encoder = encoder
+        self.decoder = decoder
+
+    def forward(self, x):
+        return self.decoder(self.encoder(x))
+
+class BAE2_Net(nn.Module):
+    def __init__(self, encoder, decoder, flat_dim, latent_dim, filterCount, redEncHeight, redEncWidth):
+        super().__init__()
+        self.encoder = encoder
+        self.fc_enc = nn.Linear(flat_dim, 10)
+        self.fc_latent = nn.Linear(10, latent_dim)
+        self.fc_dec1 = nn.Linear(latent_dim, 10)
+        self.fc_dec2 = nn.Linear(10, flat_dim)
+        self.decoder = decoder
+        
+        self.filterCount = filterCount
+        self.redEncHeight = redEncHeight
+        self.redEncWidth = redEncWidth
+
+    def forward(self, x):
+        x = torch.flatten(self.encoder(x), start_dim=1)
+        x = F.relu(self.fc_enc(x))
+        encoded = F.relu(self.fc_latent(x))
+        x = F.relu(self.fc_dec1(encoded))
+        x = F.relu(self.fc_dec2(x))
+        x = x.view(-1, self.filterCount, self.redEncHeight, self.redEncWidth)
+        return self.decoder(x)
+
+class VAE1_Net(nn.Module):
+    def __init__(self, encoder, decoder, flat_dim, latent_dim, filterCount, redEncHeight, redEncWidth):
+        super().__init__()
+        self.encoder = encoder
+        self.fc_mean = nn.Linear(flat_dim, latent_dim)
+        self.fc_log_var = nn.Linear(flat_dim, latent_dim)
+        self.sampling = Sampling()
+        self.fc_dec = nn.Linear(latent_dim, flat_dim)
+        self.decoder = decoder
+        
+        self.filterCount = filterCount
+        self.redEncHeight = redEncHeight
+        self.redEncWidth = redEncWidth
+
+    def forward(self, x):
+        enc_out = self.encoder(x)
+        flatten = torch.flatten(enc_out, start_dim=1)
+        
+        z_mean = self.fc_mean(flatten)
+        z_log_var = self.fc_log_var(flatten)
+        z = self.sampling(z_mean, z_log_var)
+        
+        x_dec = F.relu(self.fc_dec(z))
+        x_dec = x_dec.view(-1, self.filterCount, self.redEncHeight, self.redEncWidth)
+        reconstructions = self.decoder(x_dec)
+        
+        return reconstructions, z_mean, z_log_var
+
+class VAE2_Net(nn.Module):
+    def __init__(self, encoder, decoder, flat_dim, latent_dim, filterCount, redEncHeight, redEncWidth):
+        super().__init__()
+        self.encoder = encoder
+        self.fc_dense = nn.Linear(flat_dim, 16)
+        self.fc_mean = nn.Linear(16, latent_dim)
+        self.fc_log_var = nn.Linear(16, latent_dim)
+        self.sampling = Sampling()
+        self.fc_dec = nn.Linear(latent_dim, flat_dim)
+        self.decoder = decoder
+        
+        self.filterCount = filterCount
+        self.redEncHeight = redEncHeight
+        self.redEncWidth = redEncWidth
+
+    def forward(self, x):
+        enc_out = self.encoder(x)
+        x_flat = torch.flatten(enc_out, start_dim=1)
+        x_dense = F.relu(self.fc_dense(x_flat))
+        
+        z_mean = self.fc_mean(x_dense)
+        z_log_var = self.fc_log_var(x_dense)
+        z = self.sampling(z_mean, z_log_var)
+        
+        x_dec = F.relu(self.fc_dec(z))
+        x_dec = x_dec.view(-1, self.filterCount, self.redEncHeight, self.redEncWidth)
+        reconstructions = self.decoder(x_dec)
+        
+        return reconstructions, z_mean, z_log_var
+
+class VQVAE_Net(nn.Module):
+    def __init__(self, encoder, decoder, latent_dim, num_embeddings, filterCount):
+        super().__init__()
+        self.encoder = encoder
+        self.pre_vq_conv = nn.Conv2d(filterCount, latent_dim, kernel_size=1)
+        self.vq_layer = VectorQuantizer(num_embeddings, latent_dim)
+        self.decoder = decoder
+
+    def forward(self, x):
+        encoder_outputs = self.pre_vq_conv(self.encoder(x))
+        quantized_latents, vq_loss = self.vq_layer(encoder_outputs)
+        reconstructions = self.decoder(quantized_latents)
+        return reconstructions, vq_loss
+
+
+# ==============================================================================
+# Class with the saved models
+# ==============================================================================
+
 class ModelSaved():
 
-    ## Set the constants and paths
-    def __init__(self, modelSel, layerSel, imageDim, dataVariance = 0.5, intermediateDim = 64, latentDim = 16, num_embeddings = 32):
+    def __init__(self, modelSel, layerSel, imageDim, dataVariance = 0.5, intermediateDim = 64, latentDim = 32, num_embeddings = 32):
 
         # Global parameters
         self.modelName = modelSel
-        self.layerSel = ModelLayers(layerSel, imageDim)
+        self.layerSel = layerSel
+        self.im_height, self.im_width, self.im_channel = imageDim
 
         # VAE parameters
         self.intermediateDim = intermediateDim
@@ -36,7 +182,18 @@ class ModelSaved():
         self.dataVariance = dataVariance
         self.latentDim = latentDim
 
-        # Initialize and return the selected model
+        self.base_encoder = get_encoder(self.layerSel, in_channels=self.im_channel)
+
+        dummy_input = torch.zeros(1, self.im_channel, self.im_height, self.im_width)
+        
+        with torch.no_grad():
+            dummy_output = self.base_encoder(dummy_input)
+
+        _, self.filterCount, self.redEncHeight, self.redEncWidth = dummy_output.shape
+        self.flatDim = self.filterCount * self.redEncHeight * self.redEncWidth
+
+        self.base_decoder = get_decoder(self.layerSel, in_channels=self.filterCount, out_channels=self.im_channel)
+
         try:
             if self.modelName == 'VAE1':
                 self.model = self.build_vae1_model()
@@ -53,176 +210,50 @@ class ModelSaved():
             elif self.modelName == 'BAE2':
                 self.model = self.build_bae2_model()
 
-            # TODO: Define and add other models in the same way
-
             else:
                 logging.error('Unknown model name: ' + self.modelName)
                 raise ValueError('Unknown model name: ' + self.modelName)
                 return
 
-            self.model.summary()
+            logging.info(f"Model {self.modelName} initialized successfully. Flat dimension calculated as: {self.flatDim}")
 
         except:
             logging.error('Initialization of the selected model: ' + self.modelName + ' failed....')
             traceback.print_exc()
-    
-    
+
     ## Variational autoencoder 1
     def build_vae1_model(self):
-        
-        # Set the model type
         self.typeAE = 'VAE1'
         
-        # Encoder -----------------------------------------------------------
-        netEnc, input_img, redEncHeight, redEncWidth, filterCount = self.layerSel.getEncoder()
-        
-        flatten = Flatten()(netEnc)
-        z_mean = Dense(self.latentDim, name = 'mean')(flatten)
-        z_log_var = Dense(self.latentDim, name='log_var')(flatten)
-        
-        z = Sampling()([z_mean, z_log_var])
-        
-        encoder = Model(inputs = input_img, outputs = [z_mean, z_log_var, z], name = "enc")
-        
-        # Decoder -----------------------------------------------------------
-        latent_inputs = Input(shape=(self.latentDim,))
-        
-        x = Dense(redEncHeight * redEncWidth * filterCount, activation="relu")(latent_inputs)
-        x = Reshape((redEncHeight, redEncWidth, filterCount))(x)
-        
-        output_img = self.layerSel.getDecoder(x, filterCount)
-        
-        decoder = Model(inputs = latent_inputs, outputs = output_img, name = "dec")
-        
-        z_mean, z_log_var, z = encoder(input_img)
-        
-        reconstructions = decoder(z)
-        
-        vae = VAE(input_img, reconstructions, encoder, decoder, self.modelName)
-        vae.compile(optimizer = keras.optimizers.Adam())
-        
-        return vae
-    
-    
+        return VAE1_Net(self.base_encoder, self.base_decoder, self.flatDim, 
+                        self.latentDim, self.filterCount, self.redEncHeight, self.redEncWidth)
+
     ## Variational autoencoder 2 (with fully connected layers before z-parameters computation)
     def build_vae2_model(self):
-
-        # Set the model type
         self.typeAE = 'VAE2'
         
-        # Encoder -----------------------------------------------------------
-        netEnc, input_img, redEncHeight, redEncWidth, filterCount = self.layerSel.getEncoder()
-        
-        x = Flatten()(netEnc)
-        x = Dense(16, activation="relu")(x)
-        
-        z_mean = Dense(self.latentDim, name="z_mean")(x)
-        z_log_var = Dense(self.latentDim, name="z_log_var")(x)
-        
-        z = Sampling()([z_mean, z_log_var])
-        encoder = Model(input_img, [z_mean, z_log_var, z], name = "enc")
-        
-        # Decode-----------------------------------------------------------
-        latent_inputs = Input(shape=(self.latentDim,))
-        
-        x = Dense(redEncHeight * redEncWidth * filterCount, activation="relu")(latent_inputs)
-        x = Reshape((redEncHeight, redEncWidth, filterCount))(x)
-        
-        output_img = self.layerSel.getDecoder(x, filterCount)
-        
-        decoder = Model(latent_inputs, output_img, name = "dec")
-        
-        z_mean, z_log_var, z = encoder(input_img)
-        
-        reconstructions = decoder(z)
-        
-        vae = VAE(input_img, reconstructions, encoder, decoder, self.modelName)
-        vae.compile(optimizer = keras.optimizers.Adam())
-
-        return vae
-
+        return VAE2_Net(self.base_encoder, self.base_decoder, self.flatDim, 
+                        self.latentDim, self.filterCount, self.redEncHeight, self.redEncWidth)
 
     ## Convolutional VQ-VAE
     def build_vqvaeC1_model(self):
-        
-        # Set the model type
         self.typeAE = 'VQVAE1'
         
-        # Encoder -----------------------------------------------------------
-        netEnc, input_img, _, _, filterCount = self.layerSel.getEncoder()
-        
-        encoder_outputs = Conv2D(self.latentDim, 1, padding="same")(netEnc)
+        return VQVAE_Net(self.base_encoder, self.base_decoder, 
+                         self.latentDim, self.num_embeddings, self.filterCount)
 
-        encoder = keras.Model(input_img, encoder_outputs, name="enc")
-
-        # Decode-----------------------------------------------------------
-        latent_inputs = keras.Input(shape = encoder.output.shape[1:])
-        
-        output_img = self.layerSel.getDecoder(latent_inputs, filterCount)
-
-        decoder = keras.Model(latent_inputs, output_img, name="dec")
-        
-        # Instantiate VQ-VAE model
-        vq_layer = VectorQuantizer(self.num_embeddings, self.latentDim, name="vector_quantizer")
-        
-        encoder_outputs = encoder(input_img)
-        quantized_latents = vq_layer(encoder_outputs)
-        reconstructions = decoder(quantized_latents)
-        
-        vqvae = keras.Model(input_img, reconstructions, name="vq_vae")
-
-        vqvae = VQVAETrainer(input_img, reconstructions, vqvae, self.modelName, self.dataVariance, self.latentDim)
-        vqvae.compile(optimizer=keras.optimizers.Adam())
-
-        return vqvae
-
-    
     ## Basic autoencoder model
     def build_bae1_model(self):
-        
-        # Set the model type
         self.typeAE = 'BAE1'
         
-        # Encoder -----------------------------------------------------------
-        netEnc, input_img, _, _, filterCount = self.layerSel.getEncoder()
-        
-        # Decoder -----------------------------------------------------------
-        output_img = self.layerSel.getDecoder(netEnc, filterCount)
-        
-        model = Model(input_img, output_img, name = self.modelName)
-        
-        # Rename the out_E layer for enc
-        for i, layer in enumerate(model.layers):
-            if layer.name == 'out_E':
-                layer._name = 'enc'
-        
-        # Configure the model for training
-        model.compile(loss = 'mean_squared_error', optimizer = optimizers.Adam()) 
-
-        return model
-    
+        return BAE1_Net(self.base_encoder, self.base_decoder)
 
     ## Basic autoencoder model with fully connected layers before encoding
     def build_bae2_model(self):
-        
-        # Set the model type
         self.typeAE = 'BAE2'
-
-        # Encode-----------------------------------------------------------
-        netEnc, input_img, _, _, filterCount = self.layerSel.getEncoder()
         
-        x = Dense(10, activation='relu', name='dense_EM1')(netEnc)
-        encoded = Dense(self.latentDim, activation='relu', name='enc')(x)
-
-        # Decode---------------------------------------------------------------------
-        x = Dense(10, activation='relu', name='dense_DM1')(encoded)
-        
-        output_img = self.layerSel.getDecoder(x, filterCount)
-        
-        model = Model(input_img, output_img, name = self.modelName)
-        
-        # Configure the model for training
-        model.compile(loss = 'mean_squared_error', optimizer = optimizers.Adam()) 
-
-        return model
-    
+        return BAE2_Net(self.base_encoder, self.base_decoder, self.flatDim, 
+                        self.latentDim, self.filterCount, self.redEncHeight, self.redEncWidth)
+                        
+    def get_model(self) -> nn.Module:
+        return self.model

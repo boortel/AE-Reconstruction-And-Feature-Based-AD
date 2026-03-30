@@ -19,6 +19,7 @@ import warnings
 import traceback
 import matplotlib
 import configparser
+import torch
 
 from typing import Dict, List, Type
 
@@ -31,6 +32,7 @@ from ModelClassificationHardNet1 import ModelClassificationHardNet1
 from ModelClassificationHardNet2 import ModelClassificationHardNet2
 from ModelClassificationHardNet3 import ModelClassificationHardNet3
 from ModelClassificationHardNet4 import ModelClassificationHardNet4
+from MetricsToJSON import extract_and_save
 
 import Extract_logs
 extractLogs = Extract_logs.main
@@ -39,12 +41,13 @@ import ProcessLogJSON
 processLogs = ProcessLogJSON.main
 
 
+
 ## Parse the arguments
 def parse_args():
     parser = argparse.ArgumentParser(description = 'Train and evaluate models defined in the ini files of the init directory')
     
     parser.add_argument('--modelEval', '-e', default = True, type = bool, help = 'Set True for model evaluation')
-    parser.add_argument('--logClear', '-l', default = False, type = bool, help = 'Set True to delete old log be fore operation')
+    parser.add_argument('--logClear', '-l', default = False, type = bool, help = 'Set True to delete old log before operation')
 
     args = parser.parse_args()
 
@@ -54,7 +57,6 @@ def parse_args():
 ## Main function
 def main():
 
-    # Supress future warnings
     warnings.simplefilter(action = 'ignore', category = FutureWarning)
 
     # Ini base path
@@ -75,8 +77,9 @@ def main():
         if os.path.exists('./ProgramLog.txt'):
             os.remove('./ProgramLog.txt')
 
-        for file in os.listdir('./log'):
-            os.remove(os.path.join('./log', file))
+        if os.path.exists('./log'):
+            for file in os.listdir('./log'):
+                os.remove(os.path.join('./log', file))
             
 
     logging.basicConfig(filename='./ProgramLog.txt', level=logging.INFO, format='(%(asctime)s %(levelname)-7s) %(message)s')
@@ -94,18 +97,18 @@ def main():
         # General
         experimentPath = cfg.get('General', 'modelBasePath', fallback = 'NaN')
         labelInfo = cfg.get('General', 'labelInfo', fallback = 'NaN')
-        npzSave = cfg.getboolean('General', 'npzSave', fallback = 'False')
-        imageDim = (cfg.getint('General', 'imHeight', fallback = '0'), 
-                    cfg.getint('General', 'imWidth', fallback = '0'),
-                    cfg.getint('General', 'imChannel', fallback = '0'))
+        npzSave = cfg.getboolean('General', 'npzSave', fallback = False)
+        imageDim = (cfg.getint('General', 'imHeight', fallback = 0), 
+                    cfg.getint('General', 'imWidth', fallback = 0),
+                    cfg.getint('General', 'imChannel', fallback = 0))
         imIndxList = cfg.get('General', 'imIndxList', fallback = 'NaN')
 
         # Training
         layerSel = cfg.get('Training', 'layerSel', fallback = 'NaN')
         modelSel = cfg.get('Training', 'modelSel', fallback = 'NaN')
         datasetPath = cfg.get('Training', 'datasetPath', fallback = 'NaN')
-        batchSize = cfg.getint('Training', 'batchSize', fallback = '0')
-        numEpoch = cfg.getint('Training', 'numEpoch', fallback = '0')
+        batchSize = cfg.getint('Training', 'batchSize', fallback = 0)
+        numEpoch = cfg.getint('Training', 'numEpoch', fallback = 0)
         
         # Parse the img indeces, layers and model's names lists
         imIndxList = (imIndxList.replace(" ", "")).split(",")
@@ -114,11 +117,11 @@ def main():
         modelSel = (modelSel.replace(" ", "")).split(",")
         
         # Separate the ini files in log
-        logging.info('------------------------------------------------------------------------------------------------')
+        logging.info('-' * 96)
         logging.info('                                                                                                ')
         logging.info(labelInfo)
         logging.info('                                                                                                ')
-        logging.info('------------------------------------------------------------------------------------------------')
+        logging.info('-' * 96)
         
         # Create experiment directory
         if not os.path.exists(experimentPath):
@@ -148,13 +151,14 @@ def main():
                 # Train and evaluate the model
                 try:
                     modelObj = ModelTrainAndEval(modelPath, model, layer, dataGenerator, labelInfo, imageDim, imIndxList, numEpoch, modelEval, npzSave)
-                    
-                    modelData = modelObj.returnProcessedData()
-                except:
-                    logging.error('An error occured during the training or evaluation of ' + modelSel + ' model...')
+
+                    modelData = modelObj.dataGenerator.processedData
+
+                except Exception as e:
+                    logging.error(f'An error occured during the training or evaluation of {model} model...') 
                     traceback.print_exc()
                 else:
-                    logging.info('Model ' + model + ' was trained succesfuly...')
+                    logging.info(f'Model {model} was trained successfully...')
                 
                 # Extract the features and classify the model results 
                 extractors = [
@@ -168,10 +172,21 @@ def main():
                 ]
 
                 for extractor in extractors:
-                    extractor(modelDataPath, experimentPath, model, layer, labelInfo, imageDim, modelData)
+                    try:
+                        extractor(modelDataPath, experimentPath, model, layer, labelInfo, imageDim, modelData)
+                    except Exception as e:
+                        logging.error(f'An error occured in extractor {extractor.__name__} for model {model}...')
+                        traceback.print_exc()
                 
                 # Close the opened figures to spare memory
                 matplotlib.pyplot.close('all')
+                extract_and_save()
+                
+                # --- PYTORCH MEMORY MANAGEMENT ---
+                del modelObj
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
+
     return
         
 if __name__ == '__main__':

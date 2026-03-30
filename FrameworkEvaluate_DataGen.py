@@ -17,19 +17,19 @@ import os
 import time
 import yaml
 import shutil
-
 import argparse
 import configparser
 
 import cv2 as cv
 import numpy as np
-import tensorflow as tf
-
+import torch
+from torch.utils.data import DataLoader, Dataset
+from torchvision import transforms
 from pathlib import Path
+from PIL import Image
 from typing import Dict, List, Type
 
 from ModelSaved import ModelSaved
-
 from ModelClassificationBase import ModelClassificationBase
 from ModelClassificationEnc import ModelClassificationEnc
 from ModelClassificationErrM import ModelClassificationErrM
@@ -45,156 +45,147 @@ extractLogs = Extract_logs.main
 import ProcessLogJSON
 processLogs = ProcessLogJSON.main
 
+class SimpleImageDataset(Dataset):
+    def __init__(self, image_paths, transform=None):
+        self.image_paths = image_paths
+        self.transform = transform
 
-## Parse the arguments
+    def __len__(self):
+        return len(self.image_paths)
+
+    def __getitem__(self, idx):
+        path = self.image_paths[idx]
+        img = Image.open(path).convert('RGB')
+        if self.transform:
+            img = self.transform(img)
+        return img, path
+
 def parse_args():
-    parser = argparse.ArgumentParser(description = 'Train and evaluate models defined in the ini files of the init directory')
-    
-    parser.add_argument('--saveImgToFile', '-e', default = True, type = bool, help = 'Set True for model evaluation')
+    parser = argparse.ArgumentParser(description='Train and evaluate models using PyTorch')
+    parser.add_argument('--saveImgToFile', '-e', default=True, type=bool, help='Set True for model evaluation')
+    return parser.parse_args()
 
-    args = parser.parse_args()
-
-    return args
-
-## Normalize dataset
-def changeInputsTest(images):
-    
-    normalization_layer = tf.keras.layers.Rescaling(1./255)
-    x_norm = tf.image.resize(normalization_layer(images),[images.shape[1], images.shape[2]], method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
-    
-    return x_norm
-
-
-## Main function
 def main():
-
     args = parse_args()
-
-    # Get the arg values
     saveImgToFile = args.saveImgToFile        
-
-    # Ini base path
     iniBasePath = './init'
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print(f"--- Usando dispositivo: {device} ---")
 
-    # Initialize the config parser and the extension filter
     cfg = configparser.ConfigParser()
     ext = ('.ini')
 
-    # Loop through all ini files in the init directory
     for filename in os.listdir(iniBasePath):
-
-        # Get only the .ini files
         if not filename.endswith(ext):
             continue
 
-        ## Load the ini file and get the arguments
-        cfg.read(os.path.join('init', filename))
+        print(f"\n>> Procesando configuración: {filename}")
+        cfg.read(os.path.join(iniBasePath, filename))
 
-        # General configuration
-        experimentPath = cfg.get('General', 'modelBasePath', fallback = 'NaN')
-        labelInfo = cfg.get('General', 'labelInfo', fallback = 'NaN')
-        imageDim = (cfg.getint('General', 'imHeight', fallback = '0'), 
-                    cfg.getint('General', 'imWidth', fallback = '0'),
-                    cfg.getint('General', 'imChannel', fallback = '0'))
+        experimentPath = cfg.get('General', 'modelBasePath', fallback='NaN')
+        labelInfo = cfg.get('General', 'labelInfo', fallback='NaN')
+        imageDim = (cfg.getint('General', 'imHeight', fallback=0), 
+                    cfg.getint('General', 'imWidth', fallback=0),
+                    cfg.getint('General', 'imChannel', fallback=3))
 
-        # Prediction configuration
-        predictionDataPath = cfg.get('Prediction', 'predictionDataPath', fallback = '-')
-        predictionResultPath = cfg.get('Prediction', 'predictionResultPath', fallback = '-')
-        predictionBatchSize = cfg.getint('Prediction', 'batchSize', fallback = '0')
+        predictionDataPath = cfg.get('Prediction', 'predictionDataPath', fallback='-')
+        predictionResultPath = cfg.get('Prediction', 'predictionResultPath', fallback='-')
+        predictionBatchSize = cfg.getint('Prediction', 'batchSize', fallback=32)
 
-        ## Find the optimal combination
-        # extractLogs()
-        # processLogs()
-
-        # Select the optimal combination
-        modelName = cfg.get('Prediction', 'modelName', fallback = '-')
-        layerName = cfg.get('Prediction', 'layerName', fallback = '-')
-        featureExtractorName = cfg.get('Prediction', 'featureExtractorName', fallback = '-')
-        anomalyAlgorythmName = cfg.get('Prediction', 'anomalyAlgorythmName', fallback = '-')
+        modelName = cfg.get('Prediction', 'modelName', fallback='-')
+        layerName = cfg.get('Prediction', 'layerName', fallback='-')
+        featureExtractorName = cfg.get('Prediction', 'featureExtractorName', fallback='-')
+        anomalyAlgorythmName = cfg.get('Prediction', 'anomalyAlgorythmName', fallback='Local Outlier Factor')
         
         basePath = os.path.join(experimentPath, f'{layerName}_{labelInfo}', modelName)
-        aeWeightsPath = os.path.join(basePath, 'model.weights.h5')
+        aeWeightsPath = os.path.join(basePath, 'model.weights.pt') 
 
-        ## Construct the model and load the weights
         modelObj = ModelSaved(
-            modelName,
-            layerName,
-            imageDim,
-            dataVariance = 0.5, 
-            intermediateDim = 64,
-            latentDim = 32,
-            num_embeddings = 32
+            model_sel=modelName,
+            layer_sel=layerName,
+            image_dim=imageDim,
+            data_variance=0.5, 
+            intermediate_dim=64,
+            latent_dim=32,
+            num_embeddings=32
         )
 
-        model = modelObj.model
-        model.load_weights(aeWeightsPath)
-
-        ## Load the selected feature extractor
-        featureExtractor:Type[ModelClassificationBase] = {
-            # 'Enc' : ModelClassificationEnc,
-            'ErrM' : ModelClassificationErrM,
-            'SIFT' : ModelClassificationSIFT,
-            'HardNet1' : ModelClassificationHardNet1,
-            'HardNet2' : ModelClassificationHardNet2,
-            'HardNet3' : ModelClassificationHardNet3,
-            # 'HardNet4' : ModelClassificationHardNet4,
-        }[featureExtractorName]
-
-        ## Prepare the directory to store the predictions
-        if not os.path.exists(predictionResultPath):
-            os.makedirs(predictionResultPath)
-
-        okPath, nokPath = [os.path.join(predictionResultPath, subfolder) for subfolder in ['OK', 'NOK']]
-
-        if not os.path.exists(okPath):
-            os.mkdir(okPath)
-        if not os.path.exists(nokPath):
-            os.mkdir(nokPath)
-
-        # Prepare the YAML file with predictions
-        labelsPath = os.path.join(predictionResultPath, 'labels.yaml')
-        labelsDict = {'OK': [], 'NOK':[]}
-
-        # Set data generator
-        ds = tf.keras.utils.image_dataset_from_directory(
-            (predictionDataPath),
-            image_size = (imageDim[0], imageDim[1]),
-            color_mode = 'rgb' if imageDim[2] == 3 else 'grayscale',
-            batch_size = predictionBatchSize,
-            label_mode = None,
-            shuffle = False)
-        
-        # Get the filenames
-        fileNames = ds.file_paths
-
-        # Normalize dataset
-        ds = ds.map(changeInputsTest)
-
-        #for batch in ds:
+        model = modelObj.get_model()
+        if os.path.exists(aeWeightsPath):
+            model.load_state_dict(torch.load(aeWeightsPath, map_location=device))
+        else:
+            print(f"ADVERTENCIA: No se encontraron pesos en {aeWeightsPath}")
+            continue
             
+        model.to(device)
+        model.eval()
+
+        featureExtractorMap = {
+            'ErrM': ModelClassificationErrM,
+            'SIFT': ModelClassificationSIFT,
+            'HardNet1': ModelClassificationHardNet1,
+            'HardNet2': ModelClassificationHardNet2,
+            'HardNet3': ModelClassificationHardNet3,
+            'HardNet4': ModelClassificationHardNet4,
+        }
+        featureExtractorClass = featureExtractorMap[featureExtractorName]
+
+        os.makedirs(predictionResultPath, exist_ok=True)
+        okPath = os.path.join(predictionResultPath, 'OK')
+        nokPath = os.path.join(predictionResultPath, 'NOK')
+        os.makedirs(okPath, exist_ok=True)
+        os.makedirs(nokPath, exist_ok=True)
+
+        labelsPath = os.path.join(predictionResultPath, 'labels.yaml')
+        labelsDict = {'OK': [], 'NOK': []}
+
+        valid_exts = ('.jpg', '.jpeg', '.png', '.bmp')
+        fileNames = [str(p) for p in Path(predictionDataPath).rglob('*') if p.suffix.lower() in valid_exts]
+        fileNames.sort()
+
+        transform = transforms.Compose([
+            transforms.Resize((imageDim[0], imageDim[1]), interpolation=transforms.InterpolationMode.NEAREST),
+            transforms.ToTensor(),
+        ])
+
+        dataset = SimpleImageDataset(fileNames, transform=transform)
+        dataloader = DataLoader(dataset, batch_size=predictionBatchSize, shuffle=False)
+
+        all_reconstructions = []
+        all_originals = []
         startTime = time.time()
 
-        # Get the reconstruction
-        output = model.predict(ds)
+        with torch.no_grad():
+            for batch_imgs, _ in dataloader:
+                batch_imgs = batch_imgs.to(device)
+                output = model(batch_imgs)
+                
+                recon = output[0] if isinstance(output, tuple) else output
 
-        # Filter the original data
+                all_originals.append(batch_imgs.cpu().numpy().transpose(0, 2, 3, 1))
+                all_reconstructions.append(recon.cpu().numpy().transpose(0, 2, 3, 1))
+
+        orig_data = np.concatenate(all_originals, axis=0)
+        dec_data = np.concatenate(all_reconstructions, axis=0)
+
         filterStrength = 0.5
-        orig_data = np.concatenate([img for img in ds], axis=0)
-        #orig_data = batch.numpy()
-        orig_data = np.array([(filterStrength*img + (1 - filterStrength)*np.atleast_3d(cv.GaussianBlur(img, (25,25), 0))) for img in orig_data])
+        orig_data_filtered = np.array([
+            (filterStrength * img + (1 - filterStrength) * cv.GaussianBlur(img, (25, 25), 0)) 
+            for img in orig_data
+        ])
 
-        # Build prediction data
+        if orig_data_filtered.ndim == 3 and imageDim[2] == 1:
+            orig_data_filtered = np.expand_dims(orig_data_filtered, axis=-1)
+
         prediction_data = {
-            'Predict':
-            {
-                'Org': orig_data,
-                'Dec': output,
-                'Lab': [None for _ in output],
+            'Predict': {
+                'Org': orig_data_filtered,
+                'Dec': dec_data,
+                'Lab': [None for _ in dec_data],
             }
         }
         
-        # Get the labels and sort the OK / NOK files
-        feature_extractor:Type[ModelClassificationBase] = featureExtractor(
+        feature_extractor = featureExtractorClass(
             os.path.join(basePath, 'modelData'),
             predictionResultPath, modelName, layerName, 'Classification test', imageDim,
             prediction_data,
@@ -203,35 +194,19 @@ def main():
         )
         
         labels = feature_extractor.predictedLabels
-        sortedLabel = {imagePath: label for imagePath, label in zip(fileNames, labels)}
-
-        OK = [imagePath for imagePath, label in sortedLabel.items() if label]
-        NOK = [imagePath for imagePath, label in sortedLabel.items() if not label]
-
-        print("--- %s seconds ---" % (time.time() - startTime))
-
-        # Save the sorted images if set
-        if saveImgToFile:
-            for subDir, images in zip((okPath, nokPath), (OK, NOK)):
-                for image in images:
-                    shutil.copy(image, subDir)
-
-        # Save only the NOK images
-        #if saveImgToFile:
-        #    for image in NOK:
-        #        shutil.copy(image, nokPath)
-
-        # Store the labels to the dictionary
-        for label, results in zip(('OK', 'NOK'), (OK, NOK)):
-            paths = [f'{os.path.abspath(r)}' for r in results]
-
-            if paths != []:
-                labelsDict[label].append(paths)
-
-    with open(labelsPath, 'w') as labelsFile:
-        yaml.safe_dump(labelsDict, labelsFile)
-
         
+        for path, label in zip(fileNames, labels):
+            target_folder = okPath if label else nokPath
+            if saveImgToFile:
+                shutil.copy(path, target_folder)
+            
+            key = 'OK' if label else 'NOK'
+            labelsDict[key].append(os.path.abspath(path))
+
+        print(f"--- {time.time() - startTime:.2f} segundos ---")
+
+        with open(labelsPath, 'w') as labelsFile:
+            yaml.safe_dump(labelsDict, labelsFile)
+
 if __name__ == '__main__':
     main()
-    

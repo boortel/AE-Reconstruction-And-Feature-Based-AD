@@ -15,7 +15,7 @@ import cv2 as cv
 import numpy as np
 
 from scipy import spatial
-from HardNet import HardNet
+from models.hardnet import HardNet
 from skimage.util import view_as_blocks
 
 from ModelClassificationBase import ModelClassificationBase
@@ -104,6 +104,13 @@ class ModelClassificationHardNet3(ModelClassificationBase):
             desOrg = self.hardNet.forward(batchOrg)
             desDec = self.hardNet.forward(batchDec)
             
+            
+            if hasattr(desOrg, 'detach'):
+                desOrg = desOrg.detach().cpu().numpy()
+            if hasattr(desDec, 'detach'):
+                desDec = desDec.detach().cpu().numpy()
+                
+                
             # Match descriptors.
             #dist = np.linalg.norm(desOrg-desDec, axis=1)
             #metrics.append(dist)

@@ -7,13 +7,22 @@ Created on Thurs Oct 13 2022
 This class is used to set data generators and to save the original data to the npz file
 
 """
+# -*- coding: utf-8 -*-
+"""
+PyTorch Implementation of ModelDataGenerators
+
+This class is used to set data generators and to save the original data to the npz file
+"""
 
 import os
 import logging
 import traceback
 import cv2 as cv
 import numpy as np
-import tensorflow as tf
+
+import torch
+from torchvision import datasets, transforms
+from torch.utils.data import DataLoader
 
 class ModelDataGenerators():
     
@@ -35,108 +44,110 @@ class ModelDataGenerators():
         self.saveOrgData()
         
     
-    ## Normalize and augment training dataset (image as label)
-    def changeInputsTrain(self, images, labels):
-        
-        normalization_layer = tf.keras.layers.Rescaling(1./255)
-        x_norm = tf.image.resize(normalization_layer(images),[self.imageDim[0], self.imageDim[1]], method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
-        
-        # Augment the image
-        x_norm = tf.image.random_flip_left_right(x_norm)
-        x_norm = tf.image.random_contrast(x_norm, lower=0.0, upper=1.0)
-        
-        # Random image inversion and saturation
-        x_norm = (1-x_norm) if tf.random.uniform([]) < 0.5 else x_norm
-        x_norm = tf.image.stateless_random_saturation(x_norm, 0.5, 1.0)
-        
-        # Random brightness and hue
-        x_norm = tf.image.stateless_random_brightness(x_norm, 0.2)
-        x_norm = tf.image.stateless_random_hue(x_norm, 0.2)
+    ## Define augmentation pipeline for training dataset
+    def getTrainTransforms(self):
 
-        # Add salt and pepper noise
-        random_values = tf.random.uniform(shape=x_norm[0, ..., -1:].shape)
-        x_noise = tf.where(random_values < 0.1, 1., x_norm)
-        x_noise = tf.where(1 - random_values < 0.1, 0., x_noise)
+        transform_list = [
+            transforms.Resize((self.imageDim[0], self.imageDim[1]), interpolation=transforms.InterpolationMode.NEAREST),
+            transforms.RandomHorizontalFlip(p=0.5),
+            transforms.ColorJitter(brightness=0.2, contrast=0.5, saturation=0.5, hue=0.2), 
+            transforms.ToTensor()
+        ]
         
-        return x_noise, x_norm
-    
-    
-    ## Normalize test and validation datasets (image as label)
-    def changeInputsTest(self, images, labels):
+        class AddSaltPepperNoise(object):
+            def __init__(self, prob=0.1):
+                self.prob = prob
+                
+            def __call__(self, tensor):
+                noise_tensor = torch.rand(tensor.size())
+            
+                tensor = torch.where(noise_tensor < (self.prob / 2), torch.ones_like(tensor), tensor)
+                
+                tensor = torch.where(noise_tensor > 1 - (self.prob / 2), torch.zeros_like(tensor), tensor)
+                return tensor
+
+        transform_list.append(AddSaltPepperNoise(prob=0.1))
         
-        normalization_layer = tf.keras.layers.Rescaling(1./255)
-        x_norm = tf.image.resize(normalization_layer(images),[self.imageDim[0], self.imageDim[1]], method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
+        class RandomInvert(object):
+            def __call__(self, tensor):
+                if torch.rand(1).item() < 0.5:
+                    return 1.0 - tensor
+                return tensor
+                
+        transform_list.append(RandomInvert())
         
-        return x_norm, x_norm
+        if self.imageDim[2] == 1:
+            transform_list.insert(0, transforms.Grayscale(num_output_channels=1))
+
+        return transforms.Compose(transform_list)
+
     
-    
-    ## Normalize dataset (text as label)
-    def changeInputs(self, images, labels):
+    def getTestTransforms(self):
+        transform_list = [
+            transforms.Resize((self.imageDim[0], self.imageDim[1]), interpolation=transforms.InterpolationMode.NEAREST),
+            transforms.ToTensor()
+        ]
         
-        normalization_layer = tf.keras.layers.Rescaling(1./255)
-        x_norm = tf.image.resize(normalization_layer(images),[self.imageDim[0], self.imageDim[1]], method=tf.image.ResizeMethod.NEAREST_NEIGHBOR)
-        
-        return x_norm, labels
+        if self.imageDim[2] == 1:
+            transform_list.insert(0, transforms.Grayscale(num_output_channels=1))
+
+        return transforms.Compose(transform_list)
+
     
-    
-    ## Set the data generator
+    ## Set the data generator (DataLoader)
     def setGenerator(self, mode):
-            
-        # Returns generator with and without the labels, map the datasets (and augment only Train)
-        if mode == 'Train':
-            ds = tf.keras.utils.image_dataset_from_directory(
-            (self.datasetPath + mode),
-            image_size = self.tSize,
-            color_mode = self.cMode,
-            batch_size = self.batchSize,
-            label_mode = 'int',
-            shuffle = True)
-
-            dsL = tf.keras.utils.image_dataset_from_directory(
-            (self.datasetPath + mode),
-            image_size = self.tSize,
-            color_mode = self.cMode,
-            batch_size = self.batchSize,
-            label_mode = 'binary',
-            shuffle = True)
-
-            ds = ds.map(self.changeInputsTrain)
-        else:
-            ds = tf.keras.utils.image_dataset_from_directory(
-            (self.datasetPath + mode),
-            image_size = self.tSize,
-            color_mode = self.cMode,
-            batch_size = self.batchSize,
-            label_mode = 'int',
-            shuffle = False)
-
-            dsL = tf.keras.utils.image_dataset_from_directory(
-            (self.datasetPath + mode),
-            image_size = self.tSize,
-            color_mode = self.cMode,
-            batch_size = self.batchSize,
-            label_mode = 'binary',
-            shuffle = False)
-
-            ds = ds.map(self.changeInputsTest)
-            
-        # Map the labeled dataset
-        dsL = dsL.map(self.changeInputs)
+        folder_path = os.path.join(self.datasetPath, mode)
         
-        return ds, dsL
-    
+        if mode == 'train':
+            transform = self.getTrainTransforms()
+            shuffle = True
+        else:
+            transform = self.getTestTransforms()
+            shuffle = False
+        
+        class AutoencoderDataset(torch.utils.data.Dataset):
+            def __init__(self, folder_path, mode, transform, imageDim):
+                self.base_dataset = datasets.ImageFolder(root=folder_path, transform=transform)
+                self.mode = mode
+                
+                clean_transform_list = [
+                    transforms.Resize((imageDim[0], imageDim[1]), interpolation=transforms.InterpolationMode.NEAREST),
+                    transforms.ToTensor()
+                ]
+                if imageDim[2] == 1:
+                    clean_transform_list.insert(0, transforms.Grayscale(num_output_channels=1))
+                self.clean_transform = transforms.Compose(clean_transform_list)
+                
+                self.clean_base = datasets.ImageFolder(root=folder_path, transform=self.clean_transform)
+
+            def __len__(self):
+                return len(self.base_dataset)
+
+            def __getitem__(self, idx):
+                img_augmented, _ = self.base_dataset[idx]
+                img_clean, label = self.clean_base[idx]
+                
+                return img_augmented, img_clean, label
+
+        dataset = AutoencoderDataset(folder_path, mode, transform, self.imageDim)
+
+        
+        data_loader = DataLoader(
+            dataset, 
+            batch_size=self.batchSize, 
+            shuffle=shuffle, 
+            num_workers=4, 
+            pin_memory=True if torch.cuda.is_available() else False 
+        )
+        
+
+        return data_loader, data_loader 
+
     
     ## Get the data generators
     def getGenerators(self):
-
         try:
-            # Set image dimensions
             self.tSize = (self.imageDim[0], self.imageDim[1])
-
-            if self.imageDim[2] == 3:
-                self.cMode = 'rgb'
-            else:
-                self.cMode = 'grayscale'
 
             # Get train DS
             self.dsTrain, self.dsTrainL =  self.setGenerator('train')
@@ -147,44 +158,56 @@ class ModelDataGenerators():
             # Get test DS
             self.dsTest, self.dsTestL =  self.setGenerator('test')
             
-        except:
-            logging.error('Data generators initialization for the ' + self.labelInfo + ' experiment failed...')
+        except Exception as e:
+            logging.error(f'Data generators initialization for the {self.labelInfo} experiment failed...')
             traceback.print_exc()
             return
 
         else:
-            logging.info('Data generators of the ' + self.labelInfo + ' experiment initialized...')
+            logging.info(f'Data generators of the {self.labelInfo} experiment initialized...')
             
     
     ## Save the original data and labels to NPZ file
     def saveOrgData(self):
-        
         self.processedData = {}
         
         actStrs = ['Train', 'Test', 'Valid']
         dataGens = [self.dsTrainL, self.dsTestL, self.dsValidL]
         
-        for actStr, dataGen in zip(actStrs, dataGens):
+        for actStr, dataLoader in zip(actStrs, dataGens):
             
-            tempDict = {}
-        
-            # Get the original data to be saved in npz
-            orig_data = np.concatenate([img for img, _ in dataGen], axis=0)
+            orig_data_list = []
+            labels_list = []
+            
+            for _, clean_imgs, labels in dataLoader:
+                clean_imgs_np = clean_imgs.permute(0, 2, 3, 1).numpy()
+                labels_np = labels.numpy()
+                
+                orig_data_list.append(clean_imgs_np)
+                labels_list.append(labels_np)
+                
+            orig_data = np.concatenate(orig_data_list, axis=0)
+            labels = np.concatenate(labels_list, axis=0)
 
             # Get labels and transform them to format to -1: NOK and 1:OK
-            labels = np.concatenate([labels for _, labels in dataGen], axis=0)
             nokIdx = np.where(labels == 0)
             labels[nokIdx] = -1
             
-            # Filter the original data
             filterStrength = 0.5
-            orig_data = np.array([(filterStrength*img + (1 - filterStrength)*np.atleast_3d(cv.GaussianBlur(img, (25,25), 0))) for img in orig_data])
+            filtered_data = []
+            for img in orig_data:
+
+                blurred = cv.GaussianBlur(img, (25,25), 0)
+                filtered = filterStrength * img + (1 - filterStrength) * np.atleast_3d(blurred)
+                filtered_data.append(filtered)
+                
+            orig_data = np.array(filtered_data)
 
             # Save the obtained data to NPZ
             if self.npzSave:
-                outputPath = os.path.join(self.experimentPath, 'Org_' + actStr)
-                np.savez_compressed(outputPath, orgData = orig_data, labels = labels)
+                outputPath = os.path.join(self.experimentPath, f'Org_{actStr}')
+                os.makedirs(os.path.dirname(outputPath), exist_ok=True)
+                np.savez_compressed(outputPath, orgData=orig_data, labels=labels)
             
-            # Save the processed data to dictionary for a later acces
-            tempDict = {'Org': orig_data, 'Lab': labels}
-            self.processedData[actStr] = tempDict
+            # Save the processed data to dictionary for a later access
+            self.processedData[actStr] = {'Org': orig_data, 'Lab': labels}
