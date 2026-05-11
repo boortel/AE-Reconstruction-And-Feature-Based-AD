@@ -161,3 +161,8 @@ cython_debug/
 /ProgramLog.txt
 log/
 nohup.out
+
+# innecesary data and image folders
+AD_Spectrograms/
+IndustryBiscuit_Folders/
+data/
