@@ -166,3 +166,6 @@ nohup.out
 AD_Spectrograms/
 IndustryBiscuit_Folders/
 data/
+
+# ignore models .pt
+*.pt
