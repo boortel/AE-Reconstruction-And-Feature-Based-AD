@@ -13,7 +13,6 @@ def main():
     str_output_all = os.path.join(os.path.dirname(args.output),"parsedLogPlanktonIFCB167.json")
     dictionary = {}
     
-    ## Prepare the directory to store the predictions
     if not os.path.exists('./log'):
         os.mkdir('./log')
 

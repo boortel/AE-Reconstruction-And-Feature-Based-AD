@@ -14,7 +14,8 @@ import traceback
 import cv2 as cv
 import numpy as np
 
-from models.hardnet import HardNet
+#from models.hardnet import HardNet
+from hardnet_updated import HardNet
 from sklearn.utils import gen_batches
 
 from ModelClassificationBase import ModelClassificationBase

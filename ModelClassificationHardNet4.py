@@ -14,7 +14,8 @@ import traceback
 import cv2 as cv
 import numpy as np
 
-from models.hardnet import HardNet
+#from models.hardnet import HardNet
+from hardnet_updated import HardNet
 from scipy import spatial
 from skimage.util import view_as_blocks
 

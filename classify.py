@@ -1,8 +1,4 @@
 # -*- coding: utf-8 -*-
-"""
-Adapted to PyTorch
-Visualización en tiempo real de reconstrucciones del Autoencoder.
-"""
 
 import os
 import time
@@ -60,7 +56,7 @@ def main(args):
 
     transform = transforms.Compose([
         transforms.Resize((args.imHeight, args.imWidth)),
-        transforms.ToTensor(), # Esto ya escala a [0, 1]
+        transforms.ToTensor(), 
     ])
 
     imagesPath = Path(args.images)

@@ -11,3 +11,5 @@ matplotlib==3.6.1
 scikit-learn
 PyYAML==6.0.2
 tqdm
+pandas
+scikit-posthocs

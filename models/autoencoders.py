@@ -416,6 +416,130 @@ class VQVAE1(BaseAutoencoder):
         z_q, indices = self.quantizer(z)
         recon = self.decode(z_q)
         return recon, indices
+    
+class DAE(BAE2):
+    """
+    Denoising Autoencoder.
+    
+    Inherits from BAE2 (with FC bottleneck) but adds Gaussian noise
+    to the input during the training phase. This forces the model to 
+    learn robust features rather than the identity function.
+    """
+    def __init__(
+        self,
+        layer_name: str,
+        image_dim: tuple[int, int, int],
+        latent_dim: int = 32,
+        intermediate_dim: int = 64,
+        noise_factor: float = 0.1,
+        **kwargs: Any,
+    ):
+        super().__init__(layer_name, image_dim, latent_dim, intermediate_dim, **kwargs)
+        self.noise_factor = noise_factor
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        # Apply noise only if the model is in training mode
+        if self.training:
+            noise = torch.randn_like(x) * self.noise_factor
+            x_noisy = x + noise
+            # Assuming normalized inputs (e.g., [0, 1]). Adjust clamp values if needed.
+            x_noisy = torch.clamp(x_noisy, 0.0, 1.0) 
+        else:
+            x_noisy = x
+            
+        z = self.encode(x_noisy)
+        return self.decode(z)
+
+
+class SAE(BAE2):
+    """
+    Sparse Autoencoder.
+    
+    Adds an L1 penalty (sparsity constraint) to the latent space activations.
+    This encourages the model to use fewer active neurons to represent the input.
+    """
+    def __init__(
+        self,
+        layer_name: str,
+        image_dim: tuple[int, int, int],
+        latent_dim: int = 32,
+        intermediate_dim: int = 64,
+        **kwargs: Any,
+    ):
+        super().__init__(layer_name, image_dim, latent_dim, intermediate_dim, **kwargs)
+        self.sparsity_loss = 0.0
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        z = self.encode(x)
+        
+        # Calculate L1 penalty on the latent vector z
+        self.sparsity_loss = torch.mean(torch.abs(z))
+        
+        return self.decode(z)
+
+
+class AttnAE(BaseAutoencoder):
+    """
+    Attention Autoencoder.
+    
+    Applies Multi-Head Self-Attention in the bottleneck to capture global 
+    context and relationships before final compression.
+    """
+    def __init__(
+        self,
+        layer_name: str,
+        image_dim: tuple[int, int, int],
+        latent_dim: int = 32,
+        intermediate_dim: int = 64,
+        num_heads: int = 4,
+        **kwargs: Any,
+    ):
+        super().__init__(layer_name, image_dim, latent_dim)
+
+        self.encoder = get_encoder(layer_name, self.in_channels)
+
+        self.flat_size = (
+            self.layer_config.bottleneck_channels
+            * self.reduced_height
+            * self.reduced_width
+        )
+
+        # Attention projection
+        self.attn = nn.MultiheadAttention(embed_dim=self.flat_size, num_heads=num_heads, batch_first=True)
+        
+        # Latent compression
+        self.fc_encode = nn.Linear(self.flat_size, latent_dim)
+        self.fc_decode = nn.Linear(latent_dim, self.flat_size)
+
+        self.decoder = get_decoder(
+            layer_name, self.layer_config.bottleneck_channels, self.in_channels
+        )
+
+    def encode(self, x: torch.Tensor) -> torch.Tensor:
+        h = self.encoder(x)
+        h = h.view(h.size(0), -1)
+        
+        # Attention requires (Batch, Seq_len, Embed_dim). 
+        # Here we treat the entire flattened image features as a sequence of length 1.
+        h_seq = h.unsqueeze(1) 
+        attn_out, _ = self.attn(h_seq, h_seq, h_seq)
+        attn_out = attn_out.squeeze(1)
+        
+        return F.relu(self.fc_encode(attn_out))
+
+    def decode(self, z: torch.Tensor) -> torch.Tensor:
+        h = F.relu(self.fc_decode(z))
+        h = h.view(
+            h.size(0),
+            self.layer_config.bottleneck_channels,
+            self.reduced_height,
+            self.reduced_width,
+        )
+        return self.decoder(h)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        z = self.encode(x)
+        return self.decode(z)
 
 
 # =============================================================================
@@ -428,6 +552,9 @@ AUTOENCODERS: dict[str, type[BaseAutoencoder]] = {
     "VAE1": VAE1,
     "VAE2": VAE2,
     "VQVAE1": VQVAE1,
+    "DAE": DAE,       
+    "SAE": SAE,       
+    "AttnAE": AttnAE,
 }
 
 
@@ -475,4 +602,6 @@ def create_autoencoder(
         intermediate_dim=intermediate_dim,
         num_embeddings=num_embeddings,
         data_variance=data_variance,
+        noise_factor=noise_factor,
+        num_heads=num_heads,
     )

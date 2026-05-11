@@ -1,0 +1,23 @@
+{
+    "directory_analyzed": "data/Cookie_OCC",
+    "metric_optimized": "auc-roc",
+    "best_score": 0.92,
+    "top_models": [
+        {
+            "layer_model": "ConvM1",
+            "ae_model": "VQVAE1",
+            "feature_extractor": "HardNet2",
+            "classifier": "Local Outlier Factor",
+            "metrics": {
+                "auc-roc": 0.92,
+                "auc-pre": 0.91,
+                "precision": 0.84,
+                "recall": 0.84,
+                "f1": 0.84,
+                "tpr": 0.83,
+                "tnr": 0.84,
+                "balance_r": 0.99
+            }
+        }
+    ]
+}

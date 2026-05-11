@@ -54,25 +54,20 @@ def parse_args():
     return args
 
 
-## Main function
 def main():
 
     warnings.simplefilter(action = 'ignore', category = FutureWarning)
 
-    # Ini base path
     iniBasePath = './init'
 
     args = parse_args()
 
-    # Get the arg values
     modelEval = args.modelEval
     logClear = args.logClear
 
-    # Initialize the config parser and the extension filter
     cfg = configparser.ConfigParser()
     ext = ('.ini')
     
-    # Initialize the logging
     if logClear:
         if os.path.exists('./ProgramLog.txt'):
             os.remove('./ProgramLog.txt')
@@ -84,17 +79,13 @@ def main():
 
     logging.basicConfig(filename='./ProgramLog.txt', level=logging.INFO, format='(%(asctime)s %(levelname)-7s) %(message)s')
 
-    # Loop through all ini files in the init directory
     for filename in os.listdir(iniBasePath):
 
-        # Get only the .ini files
         if not filename.endswith(ext):
             continue
 
-        # Load the ini file and get the arguments
         cfg.read(os.path.join('init', filename))
 
-        # General
         experimentPath = cfg.get('General', 'modelBasePath', fallback = 'NaN')
         labelInfo = cfg.get('General', 'labelInfo', fallback = 'NaN')
         npzSave = cfg.getboolean('General', 'npzSave', fallback = False)
@@ -103,14 +94,12 @@ def main():
                     cfg.getint('General', 'imChannel', fallback = 0))
         imIndxList = cfg.get('General', 'imIndxList', fallback = 'NaN')
 
-        # Training
         layerSel = cfg.get('Training', 'layerSel', fallback = 'NaN')
         modelSel = cfg.get('Training', 'modelSel', fallback = 'NaN')
         datasetPath = cfg.get('Training', 'datasetPath', fallback = 'NaN')
         batchSize = cfg.getint('Training', 'batchSize', fallback = 0)
         numEpoch = cfg.getint('Training', 'numEpoch', fallback = 0)
         
-        # Parse the img indeces, layers and model's names lists
         imIndxList = (imIndxList.replace(" ", "")).split(",")
         imIndxList = list(map(int, imIndxList))
         layerSel = (layerSel.replace(" ", "")).split(",")
@@ -182,10 +171,6 @@ def main():
                 matplotlib.pyplot.close('all')
                 extract_and_save()
                 
-                # --- PYTORCH MEMORY MANAGEMENT ---
-                del modelObj
-                if torch.cuda.is_available():
-                    torch.cuda.empty_cache()
 
     return
         

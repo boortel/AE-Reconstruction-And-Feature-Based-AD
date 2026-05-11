@@ -77,10 +77,17 @@ class ModelTrainAndEval():
 
 
     def calculate_loss(self, x, output):
-        if self.typeAE in ['BAE1', 'BAE2']:
+        if self.typeAE in ['BAE1', 'BAE2', 'DAE', 'AttnAE']:
             recon = output
             loss = nn.MSELoss()(recon, x)
             return loss, {'loss': loss.item()}
+            
+        elif self.typeAE == 'SAE':
+            recon = output
+            mse_loss = nn.MSELoss()(recon, x)
+            sparsity_weight = 1e-4 
+            total_loss = mse_loss + (sparsity_weight * self.model.sparsity_loss)
+            return total_loss, {'total_loss': total_loss.item(), 'mse_loss': mse_loss.item(), 'sparsity_loss': self.model.sparsity_loss.item()}
             
         elif self.typeAE in ['VAE1', 'VAE2']:
             recon, mu, log_var = output
@@ -90,8 +97,19 @@ class ModelTrainAndEval():
             
             total_loss = recon_loss + kl_loss
             return total_loss, {'total_loss': total_loss.item(), 'kl_loss': kl_loss.item()}
-        
-        # TODO: Implementar VQVAE1 loss
+
+        elif self.typeAE == 'VQVAE1':
+            reconstructions, vq_loss = output
+            
+            recon_loss = torch.nn.functional.mse_loss(reconstructions, x)
+            
+            total_loss = recon_loss + vq_loss
+            
+            loss_dict = {
+                'loss': total_loss.item(),
+                'recon_loss': recon_loss.item(),
+                'vq_loss': vq_loss.item()}  
+            return total_loss, loss_dict      
         else:
             raise NotImplementedError(f"Loss for {self.typeAE} not implemented.")
 
@@ -186,6 +204,13 @@ class ModelTrainAndEval():
                         if self.typeAE in ['VAE1', 'VAE2']:
                             dec_out, z_mean, z_log_var = self.model(x)
                             enc_out = torch.stack((z_mean, z_log_var), dim=-1)
+                            
+                        elif self.typeAE == 'VQVAE1':
+                                vqvae_out = self.model(x)
+                                dec_out = vqvae_out[0] if isinstance(vqvae_out, tuple) else vqvae_out
+                                
+                                encoder_out = self.model.encoder(x)
+                                enc_out = encoder_out[0] if isinstance(encoder_out, tuple) else encoder_out
                         else:
                             enc_out = self.model.encoder(x)
                             dec_out = self.model(x)
@@ -383,7 +408,7 @@ class ModelTrainAndEval():
                             ax.scatter(img_single[:, 0], img_single[:, 1], s = 4)
                             ax.set(xlabel = "Mean", ylabel = "Variance", xlim = (-10, 10), ylim = (-10, 10))
                             
-                        elif self.typeAE in ['BAE1', 'BAE2']:
+                        elif self.typeAE in ['BAE1', 'BAE2', 'DAE', 'SAE', 'AttnAE']:
                             if img_single.ndim == 3:
                                 ax.imshow(normalize_to_uint8(img_single.mean(axis=-1)))
                             else:

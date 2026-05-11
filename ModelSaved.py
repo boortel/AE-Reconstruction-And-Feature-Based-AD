@@ -15,9 +15,6 @@ import torch.nn.functional as F
 from ModelLayers import get_encoder, get_decoder, LAYER_CONFIGS
 
 
-# ==============================================================================
-# PyTorch Sub-Modules (Equivalent to Keras functional API / ModelHelperVAE)
-# ==============================================================================
 
 class Sampling(nn.Module):
     """Uses (z_mean, z_log_var) to sample z."""
@@ -154,33 +151,128 @@ class VQVAE_Net(nn.Module):
         self.encoder = encoder
         self.pre_vq_conv = nn.Conv2d(filterCount, latent_dim, kernel_size=1)
         self.vq_layer = VectorQuantizer(num_embeddings, latent_dim)
+        self.post_vq_conv = nn.Conv2d(latent_dim, filterCount, kernel_size=1)
         self.decoder = decoder
 
     def forward(self, x):
-        encoder_outputs = self.pre_vq_conv(self.encoder(x))
-        quantized_latents, vq_loss = self.vq_layer(encoder_outputs)
-        reconstructions = self.decoder(quantized_latents)
+        encoder_outputs = self.encoder(x)
+        quantized_inputs = self.pre_vq_conv(encoder_outputs)
+        quantized_latents, vq_loss = self.vq_layer(quantized_inputs)
+        decoder_inputs = self.post_vq_conv(quantized_latents)
+        reconstructions = self.decoder(decoder_inputs)
         return reconstructions, vq_loss
 
 
-# ==============================================================================
-# Class with the saved models
-# ==============================================================================
+class DAE_Net(nn.Module):
+    """Denoising Autoencoder Network"""
+    def __init__(self, encoder, decoder, flat_dim, latent_dim, filterCount, redEncHeight, redEncWidth, noise_factor=0.1):
+        super().__init__()
+        self.encoder = encoder
+        self.noise_factor = noise_factor
+        self.fc_enc = nn.Linear(flat_dim, 10)
+        self.fc_latent = nn.Linear(10, latent_dim)
+        self.fc_dec1 = nn.Linear(latent_dim, 10)
+        self.fc_dec2 = nn.Linear(10, flat_dim)
+        self.decoder = decoder
+        
+        self.filterCount = filterCount
+        self.redEncHeight = redEncHeight
+        self.redEncWidth = redEncWidth
+
+    def forward(self, x):
+        if self.training:
+            noise = torch.randn_like(x) * self.noise_factor
+            x = torch.clamp(x + noise, 0.0, 1.0)
+            
+        x = torch.flatten(self.encoder(x), start_dim=1)
+        x = F.relu(self.fc_enc(x))
+        encoded = F.relu(self.fc_latent(x))
+        x = F.relu(self.fc_dec1(encoded))
+        x = F.relu(self.fc_dec2(x))
+        x = x.view(-1, self.filterCount, self.redEncHeight, self.redEncWidth)
+        return self.decoder(x)
+
+class SAE_Net(nn.Module):
+    """Sparse Autoencoder Network"""
+    def __init__(self, encoder, decoder, flat_dim, latent_dim, filterCount, redEncHeight, redEncWidth):
+        super().__init__()
+        self.encoder = encoder
+        self.fc_enc = nn.Linear(flat_dim, 10)
+        self.fc_latent = nn.Linear(10, latent_dim)
+        self.fc_dec1 = nn.Linear(latent_dim, 10)
+        self.fc_dec2 = nn.Linear(10, flat_dim)
+        self.decoder = decoder
+        
+        self.filterCount = filterCount
+        self.redEncHeight = redEncHeight
+        self.redEncWidth = redEncWidth
+        
+        self.sparsity_loss = 0.0
+
+    def forward(self, x):
+        x = torch.flatten(self.encoder(x), start_dim=1)
+        x = F.relu(self.fc_enc(x))
+        encoded = F.relu(self.fc_latent(x))
+        
+        self.sparsity_loss = torch.mean(torch.abs(encoded))
+        
+        x = F.relu(self.fc_dec1(encoded))
+        x = F.relu(self.fc_dec2(x))
+        x = x.view(-1, self.filterCount, self.redEncHeight, self.redEncWidth)
+        return self.decoder(x)
+
+class AttnAE_Net(nn.Module):
+    """Attention Autoencoder Network"""
+    def __init__(self, encoder, decoder, flat_dim, latent_dim, filterCount, redEncHeight, redEncWidth, num_heads=4):
+        super().__init__()
+        self.encoder = encoder
+        
+        self.attn_embed_dim = 256 
+        self.proj_in = nn.Linear(flat_dim, self.attn_embed_dim)
+        
+        self.attn = nn.MultiheadAttention(embed_dim=self.attn_embed_dim, num_heads=num_heads, batch_first=True)
+        
+        self.proj_out = nn.Linear(self.attn_embed_dim, flat_dim)
+        
+        self.fc_enc = nn.Linear(flat_dim, latent_dim)
+        self.fc_dec = nn.Linear(latent_dim, flat_dim)
+        self.decoder = decoder
+        
+        self.filterCount = filterCount
+        self.redEncHeight = redEncHeight
+        self.redEncWidth = redEncWidth
+
+    def forward(self, x):
+        x = self.encoder(x)
+        x = torch.flatten(x, start_dim=1)
+        
+        x_proj = self.proj_in(x)
+        
+        x_seq = x_proj.unsqueeze(1)
+        attn_out, _ = self.attn(x_seq, x_seq, x_seq)
+        attn_out = attn_out.squeeze(1)
+        
+        attn_restored = self.proj_out(attn_out)
+        
+        encoded = F.relu(self.fc_enc(attn_restored))
+        x = F.relu(self.fc_dec(encoded))
+        x = x.view(-1, self.filterCount, self.redEncHeight, self.redEncWidth)
+        return self.decoder(x)
+
 
 class ModelSaved():
 
-    def __init__(self, modelSel, layerSel, imageDim, dataVariance = 0.5, intermediateDim = 64, latentDim = 32, num_embeddings = 32):
+    def __init__(self, modelSel, layerSel, imageDim, dataVariance = 0.5, intermediateDim = 64, latentDim = 32, num_embeddings = 32, noiseFactor=0.1, numHeads=4):
 
-        # Global parameters
         self.modelName = modelSel
         self.layerSel = layerSel
         self.im_height, self.im_width, self.im_channel = imageDim
-
-        # VAE parameters
         self.intermediateDim = intermediateDim
         self.num_embeddings = num_embeddings
         self.dataVariance = dataVariance
         self.latentDim = latentDim
+        self.noiseFactor = noiseFactor
+        self.numHeads = numHeads
 
         self.base_encoder = get_encoder(self.layerSel, in_channels=self.im_channel)
 
@@ -209,6 +301,15 @@ class ModelSaved():
 
             elif self.modelName == 'BAE2':
                 self.model = self.build_bae2_model()
+                
+            elif self.modelName == 'DAE':
+                self.model = self.build_dae_model()
+                
+            elif self.modelName == 'SAE':
+                self.model = self.build_sae_model()
+                
+            elif self.modelName == 'AttnAE':
+                self.model = self.build_attnae_model()
 
             else:
                 logging.error('Unknown model name: ' + self.modelName)
@@ -255,5 +356,25 @@ class ModelSaved():
         return BAE2_Net(self.base_encoder, self.base_decoder, self.flatDim, 
                         self.latentDim, self.filterCount, self.redEncHeight, self.redEncWidth)
                         
+
+    ## Denoising Autoencoder
+    def build_dae_model(self):
+        self.typeAE = 'DAE'
+        return DAE_Net(self.base_encoder, self.base_decoder, self.flatDim, 
+                       self.latentDim, self.filterCount, self.redEncHeight, self.redEncWidth, self.noiseFactor)
+
+    ## Sparse Autoencoder
+    def build_sae_model(self):
+        self.typeAE = 'SAE'
+        return SAE_Net(self.base_encoder, self.base_decoder, self.flatDim, 
+                       self.latentDim, self.filterCount, self.redEncHeight, self.redEncWidth)
+
+    ## Attention Autoencoder
+    def build_attnae_model(self):
+        self.typeAE = 'AttnAE'
+        return AttnAE_Net(self.base_encoder, self.base_decoder, self.flatDim, 
+                          self.latentDim, self.filterCount, self.redEncHeight, self.redEncWidth, self.numHeads)
+
+
     def get_model(self) -> nn.Module:
         return self.model

@@ -1,0 +1,173 @@
+{
+    "model_metrics": {},
+    "features_extracted": {
+        "ErrMetrics": {
+            "Robust covariance": {
+                "auc-roc": 0.85,
+                "auc-pre": 0.8,
+                "precision": 0.78,
+                "recall": 0.78,
+                "f1": 0.78,
+                "tpr": 0.78,
+                "tnr": 0.78,
+                "balance_r": 1.0
+            },
+            "One-Class SVM": {
+                "auc-roc": 0.69,
+                "auc-pre": 0.67,
+                "precision": 0.61,
+                "recall": 0.61,
+                "f1": 0.61,
+                "tpr": 0.61,
+                "tnr": 0.61,
+                "balance_r": 1.0
+            },
+            "Isolation Forest": {
+                "auc-roc": 0.82,
+                "auc-pre": 0.75,
+                "precision": 0.74,
+                "recall": 0.74,
+                "f1": 0.74,
+                "tpr": 0.74,
+                "tnr": 0.74,
+                "balance_r": null
+            },
+            "Local Outlier Factor": {
+                "auc-roc": 0.76,
+                "auc-pre": 0.7,
+                "precision": 0.69,
+                "recall": 0.69,
+                "f1": 0.69,
+                "tpr": 0.69,
+                "tnr": 0.69,
+                "balance_r": 1.0
+            }
+        },
+        "HardNet1": {
+            "Robust covariance": {
+                "auc-roc": 0.59,
+                "auc-pre": 0.56,
+                "precision": 0.57,
+                "recall": 0.57,
+                "f1": 0.57,
+                "tpr": 0.57,
+                "tnr": 0.57,
+                "balance_r": 1.0
+            },
+            "One-Class SVM": {
+                "auc-roc": 0.66,
+                "auc-pre": 0.64,
+                "precision": 0.63,
+                "recall": 0.63,
+                "f1": 0.63,
+                "tpr": 0.64,
+                "tnr": 0.63,
+                "balance_r": null
+            },
+            "Isolation Forest": {
+                "auc-roc": 0.58,
+                "auc-pre": 0.56,
+                "precision": 0.56,
+                "recall": 0.56,
+                "f1": 0.56,
+                "tpr": 0.56,
+                "tnr": 0.56,
+                "balance_r": 1.0
+            },
+            "Local Outlier Factor": {
+                "auc-roc": 0.65,
+                "auc-pre": 0.64,
+                "precision": 0.59,
+                "recall": 0.59,
+                "f1": 0.59,
+                "tpr": 0.59,
+                "tnr": 0.59,
+                "balance_r": null
+            }
+        },
+        "HardNet2": {
+            "Robust covariance": {
+                "auc-roc": 0.57,
+                "auc-pre": 0.54,
+                "precision": 0.54,
+                "recall": 0.54,
+                "f1": 0.54,
+                "tpr": 0.54,
+                "tnr": 0.54,
+                "balance_r": 1.0
+            },
+            "One-Class SVM": {
+                "auc-roc": 0.54,
+                "auc-pre": 0.52,
+                "precision": 0.52,
+                "recall": 0.52,
+                "f1": 0.52,
+                "tpr": 0.52,
+                "tnr": 0.52,
+                "balance_r": 1.0
+            },
+            "Isolation Forest": {
+                "auc-roc": 0.52,
+                "auc-pre": 0.5,
+                "precision": 0.55,
+                "recall": 0.55,
+                "f1": 0.55,
+                "tpr": 0.55,
+                "tnr": 0.55,
+                "balance_r": 1.0
+            },
+            "Local Outlier Factor": {
+                "auc-roc": 0.53,
+                "auc-pre": 0.51,
+                "precision": 0.51,
+                "recall": 0.51,
+                "f1": 0.51,
+                "tpr": 0.52,
+                "tnr": 0.51,
+                "balance_r": null
+            }
+        },
+        "HardNet3": {
+            "Robust covariance": {
+                "auc-roc": 0.53,
+                "auc-pre": 0.49,
+                "precision": 0.54,
+                "recall": 0.54,
+                "f1": 0.54,
+                "tpr": 0.54,
+                "tnr": 0.54,
+                "balance_r": 1.0
+            },
+            "One-Class SVM": {
+                "auc-roc": 0.57,
+                "auc-pre": 0.5,
+                "precision": 0.56,
+                "recall": 0.56,
+                "f1": 0.56,
+                "tpr": 0.56,
+                "tnr": 0.56,
+                "balance_r": 1.0
+            },
+            "Isolation Forest": {
+                "auc-roc": 0.53,
+                "auc-pre": 0.48,
+                "precision": 0.53,
+                "recall": 0.53,
+                "f1": 0.53,
+                "tpr": 0.53,
+                "tnr": 0.53,
+                "balance_r": 1.0
+            },
+            "Local Outlier Factor": {
+                "auc-roc": 0.56,
+                "auc-pre": 0.49,
+                "precision": 0.53,
+                "recall": 0.54,
+                "f1": 0.53,
+                "tpr": 0.53,
+                "tnr": 0.54,
+                "balance_r": 0.99
+            }
+        }
+    }
+}

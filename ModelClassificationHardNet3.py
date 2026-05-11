@@ -15,7 +15,8 @@ import cv2 as cv
 import numpy as np
 
 from scipy import spatial
-from models.hardnet import HardNet
+#from models.hardnet import HardNet
+from hardnet_updated import HardNet
 from skimage.util import view_as_blocks
 
 from ModelClassificationBase import ModelClassificationBase
